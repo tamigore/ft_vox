@@ -1,4 +1,4 @@
-NAME = vox
+NAME = scop
 CC = g++ -Wall -Werror -Wextra
 CFLAGS =  -std=c++17
 OPENGL = -lglut -lGLU -lGL -lglfw -lX11
