@@ -14,7 +14,6 @@ struct vertex
 	math::vec3 Position;
 	math::vec3 Normal;
 	math::vec2 Texture;
-	math::vec3 Color;
 	// math::vec3 Tangent;
 	// math::vec3 Bitangent;
 

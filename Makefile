@@ -18,7 +18,8 @@ MATH =	math.cpp	\
 
 OBJECTS =	shader.cpp	\
 			camera.cpp	\
-			mesh.cpp
+			mesh.cpp 	\
+			noise.cpp
 
 csrcs =	$(addprefix srcs/, $(CSRCS))
 

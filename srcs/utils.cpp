@@ -77,3 +77,4 @@ bool	validate_float(float value, float max, float min)
 		return false;
 	return true;
 }
+                    

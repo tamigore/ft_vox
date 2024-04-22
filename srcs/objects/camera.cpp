@@ -40,6 +40,7 @@ camera::camera(math::vec3 position, math::vec3 up, float yaw, float pitch)
 	updateCameraVectors();
 }
 
+// constructor with scalar values
 camera::camera(float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch) 
 {
 	this->Position = math::vec3(posX, posY, posZ);
@@ -54,11 +55,13 @@ camera::camera(float posX, float posY, float posZ, float upX, float upY, float u
 
 camera::~camera() {}
 
+// returns the view matrix calculated using Euler Angles and the LookAt Matrix
 math::mat4	camera::GetViewMatrix()
 {
 	return math::lookAt(this->Position, this->Position + this->Front, this->Up);
 }
 
+// processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)
 void	camera::ProcessKeyboard(camera_movement direction, float deltaTime)
 {
 	float velocity = this->MovementSpeed * deltaTime;
@@ -72,6 +75,7 @@ void	camera::ProcessKeyboard(camera_movement direction, float deltaTime)
 		this->Position += this->Right * velocity;
 }
 
+// processes input received from a mouse input system. Expects the offset value in both the x and y direction.
 void	camera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch)
 {
 	xoffset *= this->MouseSensitivity;
@@ -80,6 +84,7 @@ void	camera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constr
 	this->Yaw   += xoffset;
 	this->Pitch += yoffset;
 
+	// make sure that when Pitch is out of bounds, screen doesn't get flipped
 	if (constrainPitch)
 	{
 		if (this->Pitch > 89.0f)
@@ -88,9 +93,11 @@ void	camera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constr
 			this->Pitch = -89.0f;
 	}
 
+	// update Front, Right and Up Vectors using the updated Euler angles
 	updateCameraVectors();
 }
 
+// processes input received from a mouse scroll-wheel event. Only requires input on the vertical wheel-axis
 void	camera::ProcessMouseScroll(float yoffset)
 {
 	this->Zoom -= (float)yoffset;
@@ -100,6 +107,7 @@ void	camera::ProcessMouseScroll(float yoffset)
 		this->Zoom = 45.0f;
 }
 
+// calculates the Front vector from the Camera's (updated) Euler Angles
 void	camera::updateCameraVectors()
 {
 	this->Front.x = std::cos(math::radians(this->Yaw)) * std::cos(math::radians(this->Pitch));
@@ -108,4 +116,7 @@ void	camera::updateCameraVectors()
 	this->Front = math::normalize(this->Front);
 	this->Right = math::normalize(math::cross(this->Front, this->WorldUp));
 	this->Up    = math::normalize(math::cross(this->Right, this->Front));
+	// std::cout << "Front: " << this->Front << std::endl;
+	// std::cout << "Right: " << this->Right << std::endl;
+	// std::cout << "Up: " << this->Up << std::endl;
 }

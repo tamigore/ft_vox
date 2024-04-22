@@ -2,7 +2,6 @@
 # define __MESH_HPP__
 
 # include <fstream>
-# include <map>
 # include <vector>
 
 # include "vertex.hpp"
@@ -11,9 +10,6 @@
 # include "texture.hpp"
 # include "shader.hpp"
 # include "../utils.hpp"
-
-#include "../glad/glad.h"
-#include <GLFW/glfw3.h>
 
 namespace obj
 {
@@ -33,7 +29,7 @@ class mesh
 
 	public:
 		std::string					name;
-		// std::vector<math::vec3>	vertices;
+		// std::vector<math::vec3>		vertices;
 		// std::vector<math::vec3> 	normal;
 		// std::vector<math::vec2> 	textures;
 		// std::vector<math::vec3>	index_vertices;
@@ -46,6 +42,7 @@ class mesh
         std::vector<unsigned int>	texture_indices;
         std::vector<texture>		textures;
         std::vector<face>			faces;
+        // std::vector<math::vec3>	triangle;
 		// material					m_material;
 
 		mesh();
@@ -58,7 +55,6 @@ class mesh
 		bool	add_texture(const char *name, const char *path);
 		void	min_max_bounds(math::vec3& min_bound, math::vec3& max_bound);
 		void	center_around_orgin();
-		void	facesDuplicateVertexes();
 };	
 
 std::ostream&	operator<<(std::ostream &o, const mesh &rhs);

@@ -1,14 +1,142 @@
 # define STB_IMAGE_IMPLEMENTATION
-
 # include "../../includes/stb_image.h"
-
+#include "../../includes/objects/noise.hpp"
 #include "../../includes/objects/mesh.hpp"
+#include "../glad/glad.h"
+
+#include <GLFW/glfw3.h>
 
 using namespace obj;
 
 #define OBJL_CONSOLE_OUTPUT
 
-mesh::mesh() {}
+void createFaces(obj::mesh &mesh, int x, int y, int z, int position, int face)
+{
+	math::vec3 angle[4];
+	(void)position;
+
+	switch (face)
+	{
+	case 0:
+		angle[0] = math::vec3(x, y, z);
+		angle[1] = math::vec3(x + 1, y, z);
+		angle[2] = math::vec3(x + 1, y + 1, z);
+		angle[3] = math::vec3(x, y + 1, z);
+		break;
+	case 1:
+		angle[0] = math::vec3(x, y, z + 1);
+		angle[1] = math::vec3(x + 1, y, z + 1);
+		angle[2] = math::vec3(x + 1, y + 1, z + 1);
+		angle[3] = math::vec3(x, y + 1, z + 1);
+		break;
+	case 2:
+		angle[0] = math::vec3(x, y, z);
+		angle[1] = math::vec3(x + 1, y, z);
+		angle[2] = math::vec3(x + 1, y, z + 1);
+		angle[3] = math::vec3(x, y, z + 1);
+		break;
+	case 3:
+		angle[0] = math::vec3(x, y + 1, z);
+		angle[1] = math::vec3(x + 1, y + 1, z);
+		angle[2] = math::vec3(x + 1, y + 1, z + 1);
+		angle[3] = math::vec3(x, y + 1, z + 1);
+		break;
+	case 4:
+		angle[0] = math::vec3(x, y + 1, z);
+		angle[1] = math::vec3(x, y, z);
+		angle[2] = math::vec3(x, y, z + 1);
+		angle[3] = math::vec3(x, y + 1, z + 1);
+		break;
+	case 5:
+		angle[0] = math::vec3(x + 1, y + 1, z);
+		angle[1] = math::vec3(x + 1, y, z);
+		angle[2] = math::vec3(x + 1, y, z + 1);
+		angle[3] = math::vec3(x + 1, y + 1, z + 1);
+		break;
+	default:
+		break;
+	}
+	obj::vertex tmp;
+	std::vector<math::vec2> texture = {
+		math::vec2(0.0f, 0.0f),
+		math::vec2(1.0f, 0.0f),
+		math::vec2(1.0f, 1.0f),
+		math::vec2(0.0f, 1.0f)
+	};
+	mesh.indices.push_back(mesh.vertices.size());	
+	mesh.indices.push_back(mesh.vertices.size() + 1);	
+	mesh.indices.push_back(mesh.vertices.size() + 2);
+	mesh.indices.push_back(mesh.vertices.size());	
+	mesh.indices.push_back(mesh.vertices.size() + 2);	
+	mesh.indices.push_back(mesh.vertices.size() + 3);
+	tmp.Texture = texture[0];
+	tmp.Position = angle[0];
+	mesh.vertices.push_back(tmp);
+	tmp.Texture = texture[1];
+	tmp.Position = angle[1];
+	mesh.vertices.push_back(tmp);
+	tmp.Texture = texture[2];
+	tmp.Position = angle[2];
+	mesh.vertices.push_back(tmp);
+	tmp.Texture = texture[3];
+	tmp.Position = angle[3];
+	mesh.vertices.push_back(tmp);
+}
+
+
+mesh::mesh() 
+{
+	obj::Noise noise(42, 16);
+	int size_x = 16;
+	int size_y = 16;
+	int size_z = 256;
+	unsigned char chunk[size_x * size_y * size_z];
+	for (int x = 0; x < size_x; x++){
+		for (int y = 0; y < size_y; y++){
+			float perlin = noise.Generate2D(math::vec2(x *0.047893218043, y * 0.06754896729384), 4, 0.5);
+			for (int z = 0; z < size_z; z++){
+				if (z < 10 * perlin)
+					chunk[z + y * size_z + x * size_y * size_z] = 1;
+				else
+					chunk[z + y * size_z + x * size_y * size_z] = 0;
+			}
+		}
+	}
+	std::cout << "SWITCH" << std::endl;
+	for (int x = 0; x < size_x; x++){
+		for (int y = 0; y < size_y; y++){
+			for (int z = 0; z < size_y; z++){
+				if (!chunk[z + y * size_z + x * size_y * size_z])
+					continue;
+				int position;
+				position = (z - 1) + y * size_z + x * size_y * size_z;
+				if (z == 0 || !chunk[position])
+					createFaces(*this, x, y, z, position, 0);
+				position = (z + 1) + y * size_z + x * size_y * size_z;
+				if (z == 255 || !chunk[position])
+					createFaces(*this, x, y, z, position, 1);
+				position = z + (y - 1) * size_z + x * size_y * size_z;
+				if (y == 0 || !chunk[position])
+					createFaces(*this, x, y, z, position, 2);
+				position = z + (y + 1) * size_z + x * size_y * size_z;
+				if (y == 15 || !chunk[position])
+					createFaces(*this, x, y, z, position, 3);
+				position = z + y * size_z + (x - 1) * size_y * size_z;
+				if (x == 0 || !chunk[position])
+					createFaces(*this, x, y, z, position, 4);
+				position = z + y * size_z + (x + 1) * size_y * size_z;
+				if (x == 15 || !chunk[position])
+					createFaces(*this, x, y, z, position, 5);
+			}
+		}
+	}	
+	// if (!mesh.loadMesh(av[1]))
+	// {
+	// 	std::cout << "Failed to load mesh" << std::endl;
+	// 	return -1;
+	// }
+	setupMesh();
+}
 
 mesh::mesh(char* path)
 {
@@ -25,23 +153,25 @@ mesh::~mesh() {}
 
 void	mesh::draw(shader &shader)
 {
+	// bind appropriate textures
 	unsigned int diffuseNr  = 1;
 	unsigned int specularNr = 1;
 	unsigned int normalNr   = 1;
 	unsigned int heightNr   = 1;
 	for(unsigned int i = 0; i < textures.size(); i++)
 	{
-		glActiveTexture(GL_TEXTURE0 + i);
+		glActiveTexture(GL_TEXTURE0 + i); // active proper texture unit before binding
+		// retrieve texture number (the N in diffuse_textureN)
 		std::string name = textures[i].type;
 		std::string number;
 		if(name == "texture_diffuse")
 			number = std::to_string(diffuseNr++);
 		else if(name == "texture_specular")
-			number = std::to_string(specularNr++);
+			number = std::to_string(specularNr++); // transfer unsigned int to string
 		else if(name == "texture_normal")
-			number = std::to_string(normalNr++);
+			number = std::to_string(normalNr++); // transfer unsigned int to string
 		else if(name == "texture_height")
-			number = std::to_string(heightNr++);
+			number = std::to_string(heightNr++); // transfer unsigned int to string
 
 		// now set the sampler to the correct texture unit
 		glUniform1i(glGetUniformLocation(shader.ID, (name + number).c_str()), i);
@@ -59,42 +189,50 @@ void	mesh::draw(shader &shader)
 
 void mesh::setupMesh()
 {
-	glGenVertexArrays(1, &VAO);
-	glGenBuffers(1, &VBO);
-	glGenBuffers(1, &EBO);
+    {
+        // create buffers/arrays
+        glGenVertexArrays(1, &VAO);
+        glGenBuffers(1, &VBO);
+        glGenBuffers(1, &EBO);
 
-	glBindVertexArray(VAO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(vertex), &vertices[0], GL_STATIC_DRAW);  
+        glBindVertexArray(VAO);
+        // load data into vertex buffers
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        // A great thing about structs is that their memory layout is sequential for all its items.
+        // The effect is that we can simply pass a pointer to the struct and it translates perfectly to a glm::vec3/2 array which
+        // again translates to 3/2 floats which translates to a byte array.
+        glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(vertex), &vertices[0], GL_STATIC_DRAW);  
 
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
 
-	glEnableVertexAttribArray(0);
+        // set the vertex attribute pointers
+        // vertex Positions
+        glEnableVertexAttribArray(0);	
 	std::cout << "Vertex offset Normal : " << offsetof(vertex, Normal) << " vs " << 3 * sizeof(float) << std::endl;
 	std::cout << "Vertex offset Texture : " << offsetof(vertex, Texture) << std::endl;
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)offsetof(vertex, Position));
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)offsetof(vertex, Normal));
-	glEnableVertexAttribArray(2);	
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)offsetof(vertex, Texture));
-	glEnableVertexAttribArray(3);
-	glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)offsetof(vertex, Color));
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)offsetof(vertex, Position));
+        // vertex normals
+        glEnableVertexAttribArray(1);	
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(math::vec3), (void*)offsetof(vertex, Normal));
+        // vertex texture coords
+        glEnableVertexAttribArray(2);	
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)offsetof(vertex, Texture));
+        // vertex tangent
+        // glEnableVertexAttribArray(3);
+        // glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)offsetof(vertex, Tangent));
+        // // vertex bitangent
+        // glEnableVertexAttribArray(4);
+        // glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)offsetof(vertex, Bitangent));
+		// // ids
+		// glEnableVertexAttribArray(5);
+		// glVertexAttribIPointer(5, 4, GL_INT, sizeof(vertex), (void*)offsetof(vertex, m_BoneIDs));
 
-	// vertex tangent
-	// glEnableVertexAttribArray(3);
-	// glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)offsetof(vertex, Tangent));
-	// // vertex bitangent
-	// glEnableVertexAttribArray(4);
-	// glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)offsetof(vertex, Bitangent));
-	// // ids
-	// glEnableVertexAttribArray(5);
-	// glVertexAttribIPointer(5, 4, GL_INT, sizeof(vertex), (void*)offsetof(vertex, m_BoneIDs));
-
-	// // weights
-	// glEnableVertexAttribArray(6);
-	// glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)offsetof(vertex, m_Weights));
-	glBindVertexArray(0);
+		// // weights
+		// glEnableVertexAttribArray(6);
+		// glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)offsetof(vertex, m_Weights));
+        glBindVertexArray(0);
+    }
 }
 
 std::ostream&	obj::operator<<(std::ostream &output, const mesh &input)
@@ -106,7 +244,6 @@ std::ostream&	obj::operator<<(std::ostream &output, const mesh &input)
 		output << "Position: " << input.vertices[i].Position << "\t";
 		output << "Normal: " << input.vertices[i].Normal << "\t";
 		output << "Texture: " << input.vertices[i].Texture << std::endl;
-		output << "Color: " << input.vertices[i].Color << std::endl;
 	}
 	output << "\rIndices:" << std::endl;
 	for (unsigned int i = 0; i < input.indices.size(); i++)
@@ -139,9 +276,8 @@ bool	mesh::add_vertex_position(std::string curline)
 	if (this->position_indices.size() >= this->vertices.size())
 		this->vertices.push_back(vertex());
 	this->vertices[this->position_indices.size()].Position = position;
-	this->vertices[this->position_indices.size()].Normal = math::vec3(0.0);
-	this->vertices[this->position_indices.size()].Texture = math::vec2(0.0);
-	this->vertices[this->position_indices.size()].Color = math::vec3(0.0);
+	this->vertices[this->position_indices.size()].Normal = math::vec3(0.3f, 0.3f, 0.4f);
+	this->vertices[this->position_indices.size()].Texture = math::vec2(position.x, position.y);
 	this->position_indices.push_back(this->position_indices.size());
 	return true;
 }
@@ -375,7 +511,6 @@ bool	mesh::loadMesh(const char* path)
 		// }
 	}
 	center_around_orgin();
-	facesDuplicateVertexes();
 	setupMesh();
 	std::cout << "Mesh Loaded" << std::endl;
 	return true;
@@ -419,51 +554,3 @@ void	mesh::center_around_orgin()
 	}
 }
 
-void	mesh::facesDuplicateVertexes()
-{
-	std::map<unsigned int, unsigned int> nbPosIndex;
-	math::vec3 color = {0.0, 0.0, 0.0};
-	std::vector<math::vec2> textures = {
-		{0.0, 0.0},
-		{0.0, 1.0},
-		{1.0, 0.0},
-		{1.0, 1.0}
-	};
-	int face = 0;
-	for (std::vector<unsigned int>::iterator it = this->indices.begin(); it != this->indices.end(); ++it)
-	{
-		if (nbPosIndex.find(*it) == nbPosIndex.end())
-		{
-			nbPosIndex[*it] = 1;
-			this->vertices[*it].Color = color;
-			this->vertices[*it].Texture = textures[face % 4];
-		}
-		else
-		{
-			this->vertices.push_back(this->vertices[*it]);
-			*it = this->vertices.size() - 1;
-			nbPosIndex[*it] += 1;
-			this->vertices[*it].Color = color;
-			this->vertices[*it].Texture = textures[face % 4];
-		}
-		face++;
-		if (face % 3 == 0)
-		{
-			if (color.x >= 1.0)
-				color.x = 0.0;
-			color.x += 0.1;
-		}
-		if (face % 6 == 0)
-		{
-			if (color.y >= 1.0)
-				color.y = 0.0;
-			color.y += 0.1;
-		}
-		if (face % 9 == 0)
-		{
-			if (color.z >= 1.0)
-				color.z = 0.0;
-			color.z += 0.1;
-		}
-	}
-}
