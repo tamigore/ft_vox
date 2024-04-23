@@ -12,8 +12,6 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 
-bool	rotate = false;
-bool	useColor = false;
 bool	skybox_active = false;
 
 float	mixValue = 0.2f;
@@ -222,13 +220,6 @@ int main()
 		math::mat4 view = camera.GetViewMatrix();
 		ourShader.setMat4("view", view);
 
-		if (rotate)
-		{
-			float angle = glfwGetTime() * 20.0f;
-			math::vec3 axis = math::vec3(1.0f, 0.0f, 0.0f);
-			axis.normalize();
-			model = math::rotate(model, math::radians(angle), axis);
-		}
 		ourShader.setMat4("model", model);
 
 		for (auto chunk : chunks)
@@ -300,7 +291,7 @@ void processInput(GLFWwindow *window)
 	{
 		b_pressed = false;
 		skybox_active = !skybox_active;
-		std::cout << "rotate: " << rotate << std::endl;
+		std::cout << "skybox_active: " << skybox_active << std::endl;
 	}
 }
 
