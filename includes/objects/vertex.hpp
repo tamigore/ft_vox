@@ -15,6 +15,10 @@ struct vertex
 	math::vec3 Normal;
 	math::vec2 Texture;
 	math::vec3 Color;
+
+	float	face;
+    float	block;
+
 	// math::vec3 Tangent;
 	// math::vec3 Bitangent;
 

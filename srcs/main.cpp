@@ -2,6 +2,8 @@
 #include "../includes/objects/shader.hpp"
 #include "../includes/objects/camera.hpp"
 #include "../includes/objects/mesh.hpp"
+#include "../includes/chunk.hpp"
+#include "../includes/noise.hpp"
 
 #include "../includes/stb_image.h"
 
@@ -10,15 +12,15 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 
-bool	rotate = true;
-bool	useColor = true;
+bool	rotate = false;
+bool	useColor = false;
 bool	skybox_active = false;
 
 float	mixValue = 0.2f;
-void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-void mouse_callback(GLFWwindow* window, double xpos, double ypos);
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-void processInput(GLFWwindow *window);
+void	framebuffer_size_callback(GLFWwindow* window, int width, int height);
+void	mouse_callback(GLFWwindow* window, double xpos, double ypos);
+void	scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
+void	processInput(GLFWwindow *window);
 
 // settings
 const unsigned int SCR_WIDTH = 1920;
@@ -34,11 +36,8 @@ bool firstMouse = true;
 float deltaTime = 0.0f;	// time between current frame and last frame
 float lastFrame = 0.0f;
 
-int main(int ac, char **av)
+int main()
 {
-	if (ac != 2)
-		return -1;
-
 	// glfw: initialize and configure
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -75,18 +74,21 @@ int main(int ac, char **av)
 	// configure global opengl state
 	glEnable(GL_DEPTH_TEST);
 
-	// build and compile our shader zprogram
+	// build and compile our shader dirtUpgradezprogram
 	obj::shader ourShader("srcs/objects/textures/texture.vs", "srcs/objects/textures/texture.fs", nullptr);
 
-	obj::mesh mesh;
-	if (!mesh.loadMesh(av[1]))
-	{
-		std::cout << "Failed to load mesh" << std::endl;
-		return -1;
-	}
-	mesh.add_texture("container.png", "srcs/objects/textures");
-	mesh.add_texture("awesomeface.png", "srcs/objects/textures");
-	// std::cout << mesh << std::endl;
+	std::vector<obj::Chunk *> chunks;
+    int renderDistance = 10;
+    for (int i = -renderDistance/2; i <= renderDistance/2; i++)
+    {
+        for (int j = -renderDistance/2; j <= renderDistance/2; j++)
+        {
+			obj::Chunk *chunk = new obj::Chunk(i, j);
+			chunk->add_texture("dirt.png", "srcs/objects/textures/minecraft/dirt");
+			chunk->add_texture("obsi.png", "srcs/objects/textures/minecraft");
+            chunks.push_back(chunk);
+        }
+    }
 
 	// SKY BOX
 	obj::shader skyboxShader("srcs/objects/skybox/skybox.vs", "srcs/objects/skybox/skybox.fs", nullptr);
@@ -127,21 +129,13 @@ int main(int ac, char **av)
 	};
 
 	// // SKY BOX IMAGES
-	// std::vector<const char *> files = {
-	// 	"srcs/objects/skybox/right.png",
-	// 	"srcs/objects/skybox/left.png",
-	// 	"srcs/objects/skybox/top.png",
-	// 	"srcs/objects/skybox/bottom.png",
-	// 	"srcs/objects/skybox/front.png",
-	// 	"srcs/objects/skybox/back.png"
-	// };
 	std::vector<const char *> files = {
-		"srcs/objects/skybox/px.png",
-		"srcs/objects/skybox/nx.png",
-		"srcs/objects/skybox/py.png",
-		"srcs/objects/skybox/ny.png",
-		"srcs/objects/skybox/pz.png",
-		"srcs/objects/skybox/nz.png"
+		"srcs/objects/skybox/cloudySky/px.png",
+		"srcs/objects/skybox/cloudySky/nx.png",
+		"srcs/objects/skybox/cloudySky/py.png",
+		"srcs/objects/skybox/cloudySky/ny.png",
+		"srcs/objects/skybox/cloudySky/pz.png",
+		"srcs/objects/skybox/cloudySky/nz.png"
 	};
 
 	unsigned int skyboxVAO, skyboxVBO, skyboxEBO;
@@ -202,6 +196,10 @@ int main(int ac, char **av)
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 
 	// render loop
+	math::mat4 model = math::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+	model = math::rotate(model, math::radians(90.0f), math::vec3(1.0f, 0.0f, 0.0f));
+	model = model.translate(-10.0f, -15.0f, -5.0f);
+
 	while (!glfwWindowShouldClose(window))
 	{
 		// per-frame time logic
@@ -224,22 +222,19 @@ int main(int ac, char **av)
 		math::mat4 view = camera.GetViewMatrix();
 		ourShader.setMat4("view", view);
 
-		ourShader.setFloat("mixValue", mixValue);
-		ourShader.setBool("useColor", useColor);
-
-		math::mat4 model = math::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-
 		if (rotate)
 		{
 			float angle = glfwGetTime() * 20.0f;
-			math::vec3 axis = math::vec3(1.0f, 1.3f, 0.0f);
+			math::vec3 axis = math::vec3(1.0f, 0.0f, 0.0f);
 			axis.normalize();
 			model = math::rotate(model, math::radians(angle), axis);
 		}
 		ourShader.setMat4("model", model);
 
-		// draw mesh
-		mesh.draw(ourShader);
+		for (auto chunk : chunks)
+        {
+            chunk->draw(ourShader);
+        }
 
 		if (skybox_active)
 		{
@@ -280,8 +275,6 @@ int main(int ac, char **av)
 	return 0;
 }
 
-bool r_pressed = false;
-bool c_pressed = false;
 bool b_pressed = false;
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
@@ -291,50 +284,13 @@ void processInput(GLFWwindow *window)
 		glfwSetWindowShouldClose(window, true);
 
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		camera.ProcessKeyboard(obj::FORWARD, deltaTime);
+		camera.ProcessKeyboard(obj::FORWARD, deltaTime * 5.0f);
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		camera.ProcessKeyboard(obj::BACKWARD, deltaTime);
+		camera.ProcessKeyboard(obj::BACKWARD, deltaTime * 5.0f);
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-		camera.ProcessKeyboard(obj::LEFT, deltaTime);
+		camera.ProcessKeyboard(obj::LEFT, deltaTime * 5.0f);
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-		camera.ProcessKeyboard(obj::RIGHT, deltaTime);
-
-	if (glfwGetKey(window, GLFW_KEY_LEFT_BRACKET) == GLFW_PRESS)
-	{
-		std::cout << "UP mixValue: " << mixValue << std::endl;
-		mixValue += 0.01f;
-		if(mixValue >= 1.0f)
-			mixValue = 1.0f;
-	}
-	if (glfwGetKey(window, GLFW_KEY_RIGHT_BRACKET) == GLFW_PRESS)
-	{
-		std::cout << "Down mixValue: " << mixValue << std::endl;
-		mixValue -= 0.01f;
-		if (mixValue <= 0.0f)
-			mixValue = 0.0f;
-	}
-
-	if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS)
-	{
-		c_pressed = true;
-	}
-	if (glfwGetKey(window, GLFW_KEY_C) == GLFW_RELEASE && c_pressed)
-	{
-		c_pressed = false;
-		useColor = !useColor;
-		std::cout << "useColor: " << useColor << std::endl;
-	}
-
-	if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS)
-	{
-		r_pressed = true;
-	}
-	if (glfwGetKey(window, GLFW_KEY_R) == GLFW_RELEASE && r_pressed)
-	{
-		r_pressed = false;
-		rotate = !rotate;
-		std::cout << "rotate: " << rotate << std::endl;
-	}
+		camera.ProcessKeyboard(obj::RIGHT, deltaTime * 5.0f);
 
 	if (glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS)
 	{

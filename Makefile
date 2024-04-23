@@ -1,9 +1,11 @@
-NAME = scop
+NAME = vox
 CC = g++ -Wall -Werror -Wextra
 CFLAGS =  -std=c++17
 OPENGL = -lglut -lGLU -lGL -lglfw -lX11
 
 CPPSRCS =	main.cpp	\
+			noise.cpp	\
+			chunk.cpp	\
 			utils.cpp
 
 CSRCS =	glad.c

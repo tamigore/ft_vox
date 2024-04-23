@@ -1,6 +1,6 @@
-# define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_IMPLEMENTATION
 
-# include "../../includes/stb_image.h"
+#include "../../includes/stb_image.h"
 
 #include "../../includes/objects/mesh.hpp"
 
@@ -8,7 +8,54 @@ using namespace obj;
 
 #define OBJL_CONSOLE_OUTPUT
 
-mesh::mesh() {}
+mesh::mesh()
+{
+	obj::Noise noise(42, 16);
+	int size_x = 16;
+	int size_y = 16;
+	int size_z = 256;
+	unsigned char chunk[size_x * size_y * size_z];
+	for (int x = 0; x < size_x; x++){
+		for (int y = 0; y < size_y; y++){
+			float perlin = noise.Generate2D(math::vec2(x *0.047893218043, y * 0.06754896729384), 4, 0.5);
+			for (int z = 0; z < size_z; z++){
+				if (z < 10 * perlin)
+					chunk[z + y * size_z + x * size_y * size_z] = 1;
+				else
+					chunk[z + y * size_z + x * size_y * size_z] = 0;
+			}
+		}
+	}
+	std::cout << "SWITCH" << std::endl;
+	for (int x = 0; x < size_x; x++){
+		for (int y = 0; y < size_y; y++){
+			for (int z = 0; z < size_y; z++){
+				if (!chunk[z + y * size_z + x * size_y * size_z])
+					continue;
+				int position;
+				position = (z - 1) + y * size_z + x * size_y * size_z;
+				if (z == 0 || !chunk[position])
+					createFaces(*this, x, y, z, 0);
+				position = (z + 1) + y * size_z + x * size_y * size_z;
+				if (z == 255 || !chunk[position])
+					createFaces(*this, x, y, z, 1);
+				position = z + (y - 1) * size_z + x * size_y * size_z;
+				if (y == 0 || !chunk[position])
+					createFaces(*this, x, y, z, 2);
+				position = z + (y + 1) * size_z + x * size_y * size_z;
+				if (y == 15 || !chunk[position])
+					createFaces(*this, x, y, z, 3);
+				position = z + y * size_z + (x - 1) * size_y * size_z;
+				if (x == 0 || !chunk[position])
+					createFaces(*this, x, y, z, 4);
+				position = z + y * size_z + (x + 1) * size_y * size_z;
+				if (x == 15 || !chunk[position])
+					createFaces(*this, x, y, z, 5);
+			}
+		}
+	}	
+	setupMesh();
+}
 
 mesh::mesh(char* path)
 {
@@ -22,6 +69,80 @@ mesh::mesh(char* path)
 }
 
 mesh::~mesh() {}
+
+void mesh::createFaces(obj::mesh &mesh, int x, int y, int z, int face)
+{
+	math::vec3 angle[4];
+	math::vec3 normal;
+
+	switch (face)
+	{
+		case 0:
+			angle[0] = math::vec3(x, y, z);
+			angle[1] = math::vec3(x + 1, y, z);
+			angle[2] = math::vec3(x + 1, y + 1, z);
+			angle[3] = math::vec3(x, y + 1, z);
+			normal = math::vec3(0, 0, -1);
+			break;
+		case 1:
+			angle[0] = math::vec3(x, y, z + 1);
+			angle[1] = math::vec3(x + 1, y, z + 1);
+			angle[2] = math::vec3(x + 1, y + 1, z + 1);
+			angle[3] = math::vec3(x, y + 1, z + 1);
+			normal = math::vec3(0, 0, 1);
+			break;
+		case 2:
+			angle[0] = math::vec3(x, y, z);
+			angle[1] = math::vec3(x + 1, y, z);
+			angle[2] = math::vec3(x + 1, y, z + 1);
+			angle[3] = math::vec3(x, y, z + 1);
+			normal = math::vec3(0, -1, 0);
+			break;
+		case 3:
+			angle[0] = math::vec3(x, y + 1, z);
+			angle[1] = math::vec3(x + 1, y + 1, z);
+			angle[2] = math::vec3(x + 1, y + 1, z + 1);
+			angle[3] = math::vec3(x, y + 1, z + 1);
+			normal = math::vec3(0, 1, 0);
+			break;
+		case 4:
+			angle[0] = math::vec3(x, y + 1, z);
+			angle[1] = math::vec3(x, y, z);
+			angle[2] = math::vec3(x, y, z + 1);
+			angle[3] = math::vec3(x, y + 1, z + 1);
+			normal = math::vec3(-1, 0, 0);
+			break;
+		case 5:
+			angle[0] = math::vec3(x + 1, y + 1, z);
+			angle[1] = math::vec3(x + 1, y, z);
+			angle[2] = math::vec3(x + 1, y, z + 1);
+			angle[3] = math::vec3(x + 1, y + 1, z + 1);
+			normal = math::vec3(1, 0, 0);
+			break;
+		default:
+			break;
+	}
+	obj::vertex tmp;
+	std::vector<math::vec2> texture = {
+		math::vec2(0.0f, 0.0f),
+		math::vec2(1.0f, 0.0f),
+		math::vec2(1.0f, 1.0f),
+		math::vec2(0.0f, 1.0f)
+	};
+	mesh.indices.push_back(mesh.vertices.size());	
+	mesh.indices.push_back(mesh.vertices.size() + 1);	
+	mesh.indices.push_back(mesh.vertices.size() + 2);
+	mesh.indices.push_back(mesh.vertices.size());	
+	mesh.indices.push_back(mesh.vertices.size() + 2);	
+	mesh.indices.push_back(mesh.vertices.size() + 3);
+	for (int i = 0; i < 4; i++)
+	{
+		tmp.Position = angle[i];
+		tmp.Texture = texture[i];
+		tmp.Normal = normal;
+		mesh.vertices.push_back(tmp);
+	}
+}
 
 void	mesh::draw(shader &shader)
 {
@@ -80,20 +201,6 @@ void mesh::setupMesh()
 	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)offsetof(vertex, Texture));
 	glEnableVertexAttribArray(3);
 	glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)offsetof(vertex, Color));
-
-	// vertex tangent
-	// glEnableVertexAttribArray(3);
-	// glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)offsetof(vertex, Tangent));
-	// // vertex bitangent
-	// glEnableVertexAttribArray(4);
-	// glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)offsetof(vertex, Bitangent));
-	// // ids
-	// glEnableVertexAttribArray(5);
-	// glVertexAttribIPointer(5, 4, GL_INT, sizeof(vertex), (void*)offsetof(vertex, m_BoneIDs));
-
-	// // weights
-	// glEnableVertexAttribArray(6);
-	// glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)offsetof(vertex, m_Weights));
 	glBindVertexArray(0);
 }
 
@@ -334,45 +441,6 @@ bool	mesh::loadMesh(const char* path)
 			if (!add_face(param))
 				return false;
 		}
-		// else if (prefix == "g")
-		// {
-		// 	#ifdef OBJL_CONSOLE_OUTPUT
-		// 	std::cout << "g" << std::endl;
-		// 	#endif
-		// }
-		// else if (prefix == "usemtl")
-		// {
-		// 	#ifdef OBJL_CONSOLE_OUTPUT
-		// 	std::cout << "usemtl" << std::endl;
-		// 	#endif
-		// }
-		// else if (prefix == "mtllib")
-		// {
-		// 	#ifdef OBJL_CONSOLE_OUTPUT
-		// 	std::cout << "mtllib" << std::endl;
-		// 	#endif
-		// }
-		// else if (prefix == "s")
-		// {
-		// 	#ifdef OBJL_CONSOLE_OUTPUT
-		// 	if (tail(curline) == "off")
-		// 	{
-		// 		std::cout << "Smooth shading disabled" << std::endl;
-		// 	}
-		// 	else
-		// 	{
-		// 		std::cout << "Smooth shading group" << std::endl;
-		// 	}
-		// 	#endif
-		// }
-		// else if (prefix[0] == '#')
-		// {
-		// 	continue;
-		// }
-		// else
-		// {
-		// 	std::cout << "Unknown token: " << prefix << std::endl;
-		// }
 	}
 	center_around_orgin();
 	facesDuplicateVertexes();
@@ -403,14 +471,11 @@ void	mesh::center_around_orgin()
 
 	min_max_bounds(min_bound, max_bound);
 
-	// std::cout << "min : " << min_bound.v[0] << " " << min_bound.v[1] << " " << min_bound.v[2] << std::endl;
-	// std::cout << "max : " << max_bound.v[0] << " " << max_bound.v[1] << " " << max_bound.v[2] << std::endl;
 	math::vec3 center = {0, 0, 0};
 	
 	center[0] = (min_bound[0] + max_bound[0]) / 2;
 	center[1] = (min_bound[1] + max_bound[1]) / 2;
 	center[2] = (min_bound[2] + max_bound[2]) / 2;
-	// std::cout << "center : " << center.v[0] << " " << center.v[1] << " " << center.v[2] << std::endl;
 
 	for (std::vector<obj::vertex>::iterator vert = this->vertices.begin(); vert != this->vertices.end(); ++vert)  {
 		(vert->Position)[0] -= center[0];

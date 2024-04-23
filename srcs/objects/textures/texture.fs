@@ -1,20 +1,21 @@
 #version 330 core 
-out vec4 FragColor;
+out	vec4	FragColor;
 
-in vec2 Texture;
-in vec3 Color;
-
-uniform float mixValue;
-uniform bool useColor;
+in	vec2	Texture;
+in	float	faceout;
+in	float	blockid;
 
 uniform sampler2D texture_diffuse1;
 uniform sampler2D texture_diffuse2;
 
 void main()
 {
-	if (useColor)
-		FragColor = vec4(Color, 1.0f);
+	if (blockid < 0.5)
+		FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+	else if (blockid < 1.5)
+		FragColor = texture(texture_diffuse1, Texture) * faceout;
+	else if (blockid < 2.5)
+		FragColor = texture(texture_diffuse2, Texture) * faceout;
 	else
-		FragColor = mix(texture(texture_diffuse1, Texture), texture(texture_diffuse2, Texture), texture(texture_diffuse2, Texture).a * mixValue);
-
+		FragColor = vec4(0.0, 0.0, 1.0, 1.0);
 }

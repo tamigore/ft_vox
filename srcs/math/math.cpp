@@ -70,48 +70,27 @@ mat4	math::perspective(float fov, float aspect, float near, float far)
 
 mat4	math::lookAt(vec3 position, vec3 target, vec3 worldUp)
 {
-	// std::cout << "position: " << position << std::endl;
-	// std::cout << "target: " << target << std::endl;
-	// std::cout << "worldUp: " << worldUp << std::endl;
-    // 1. Position = known
-    // 2. Calculate cameraDirection
-	// std::cout << position - target << std::endl;
     vec3 zaxis = normalize(position - target);
-    // 3. Get positive right axis vector
     vec3 xaxis = normalize(cross(normalize(worldUp), zaxis));
-    // 4. Calculate camera up vector
     vec3 yaxis = cross(zaxis, xaxis);
 
-	// std::cout << "xaxis: " << xaxis << std::endl;
-	// std::cout << "{" << std::endl;
-	// std::cout << "    " << cross(normalize(worldUp), zaxis) << std::endl;
-	// std::cout << "    " << normalize(worldUp) << std::endl;
-	// std::cout << "}" << std::endl;
-	// std::cout << "yaxis: " << yaxis << std::endl;
-	// std::cout << "zaxis: " << zaxis << std::endl;
-    // Create translation and rotation matrix 
-    // In glm we access elements as mat[col][row] due to column-major layout
-    mat4 translation = mat4(1.0f); // Identity matrix by default
-    translation[3][0] = -position.x; // Fourth column, first row
+    mat4 translation = mat4(1.0f);
+    translation[3][0] = -position.x;
     translation[3][1] = -position.y;
     translation[3][2] = -position.z;
-	// std::cout << "translation:\n" << translation << std::endl;
 
     mat4 rotation = mat4(1.0f);
-    rotation[0][0] = xaxis.x; // First column, first row
+    rotation[0][0] = xaxis.x;
     rotation[1][0] = xaxis.y;
     rotation[2][0] = xaxis.z;
-    rotation[0][1] = yaxis.x; // First column, second row
+    rotation[0][1] = yaxis.x;
     rotation[1][1] = yaxis.y;
     rotation[2][1] = yaxis.z;
-    rotation[0][2] = zaxis.x; // First column, third row
+    rotation[0][2] = zaxis.x;
     rotation[1][2] = zaxis.y;
     rotation[2][2] = zaxis.z;
-	// std::cout << "rotation:\n" << rotation << std::endl;
 
 	mat4 lookAt = translation * rotation;
-	// std::cout << "lookAt:\n" << lookAt << std::endl;
-    // Return lookAt matrix as combination of translation and rotation matrix
     return lookAt; // Remember to read from right to left (first translation then rotation)
 }
 

@@ -10,6 +10,7 @@
 # include "face.hpp"
 # include "texture.hpp"
 # include "shader.hpp"
+# include "../noise.hpp"
 # include "../utils.hpp"
 
 #include "../glad/glad.h"
@@ -33,12 +34,6 @@ class mesh
 
 	public:
 		std::string					name;
-		// std::vector<math::vec3>	vertices;
-		// std::vector<math::vec3> 	normal;
-		// std::vector<math::vec2> 	textures;
-		// std::vector<math::vec3>	index_vertices;
-		// std::vector<math::vec3> 	index_normals;
-		// std::vector<math::vec2> 	index_textures;
         std::vector<vertex>			vertices;
         std::vector<unsigned int>	indices;
         std::vector<unsigned int>	position_indices;
@@ -50,9 +45,9 @@ class mesh
 
 		mesh();
 		mesh(char* path);
-		// mesh(std::vector<vertex> vertices, std::vector<unsigned int> indices, std::vector<texture> textures);
 		~mesh();
 
+		void	createFaces(obj::mesh &mesh, int x, int y, int z, int face);
         void	draw(shader &shader);
 		bool	loadMesh(const char *path);
 		bool	add_texture(const char *name, const char *path);
