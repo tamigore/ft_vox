@@ -21,8 +21,13 @@ public:
 
 	void	createFaces( int x, int y, int z, int position, int face, int block);
 	void	draw(shader &shader);
+	void	initVAO();
 	bool	add_texture(const char *name, const char *path);
-
+	unsigned int	TextureFromFile(const char *path, const std::string &directory);
+	bool 	isVAO=false;
+	void			setupMesh();
+	int		posX;
+	int		posY;
 private:
 
 	unsigned int VAO, VBO, EBO;
@@ -31,11 +36,7 @@ private:
 	std::vector<unsigned int>	indices;
 	std::vector<texture>		textures;
 
-	int		posX;
-	int		posY;
 
-	void			setupMesh();
-	unsigned int	TextureFromFile(const char *path, const std::string &directory);
 };
 
 }

@@ -3,7 +3,7 @@
 
 using namespace obj;
 
-Chunk::Chunk(int x, int y) : posX(x), posY(y)
+Chunk::	Chunk(int x, int y) : posX(x), posY(y)
 {
 	obj::Noise noise(42, 16);
 	obj::Noise noise2(3131, 16);
@@ -13,8 +13,11 @@ Chunk::Chunk(int x, int y) : posX(x), posY(y)
 	unsigned char chunk[size_x * size_y * size_z];
 	for (int x = 0; x < size_x; x++){
 		for (int y = 0; y < size_y; y++){
-			int perlin = 2 + 10 * noise.Generate2D(math::vec2((abs(posX * size_x + x)) *0.047893218043, (abs(posY * size_y + y)) * 0.06754896729384), 4, 0.5);
-			int perlinoise = 30 * noise2.Generate2D(math::vec2((abs(posX * size_x + x)) *0.047865418043, (abs(posY * size_y + y)) * 0.06747496729384), 4, 0.5);
+			float px, py;
+			px = posX * size_x + x;
+			py = posY * size_y + y;
+			int perlin = 2 + 10 * noise.Generate2D(math::vec2(px * 0.0047893218043 + 10000, py *0.003123123123123 + 10000), 4, 0.5);
+			int perlinoise = 30 * noise2.Generate2D(math::vec2(px * 0.0047893218043 + 10000, py *0.003123123123123 + 10000), 4, 0.5);
             for (int z = 0; z < size_z; z++)
 			{
 				if (z < perlin)
@@ -52,8 +55,7 @@ Chunk::Chunk(int x, int y) : posX(x), posY(y)
 					createFaces(posX * size_x + x, posY * size_y + y, z, position, 5.0, chunk[z + y * size_z + x * size_y * size_z]);
 			}
 		}
-	}	
-	setupMesh();
+	}
 }
 
 Chunk::~Chunk()
@@ -116,10 +118,7 @@ void Chunk::createFaces( int x, int y, int z, int position, int face, int block)
 		math::vec2(1.0f, 1.0f),
 		math::vec2(0.0f, 1.0f)
 	};
-    if (face == 2 || face == 4)
-    {
-        face = 0;
-    }
+
 	indices.push_back(vertices.size());	
 	indices.push_back(vertices.size() + 1);	
 	indices.push_back(vertices.size() + 2);
@@ -179,6 +178,7 @@ void Chunk::setupMesh()
     // glEnableVertexAttribArray(6);
     // glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)offsetof(vertex, m_Weights));
     glBindVertexArray(0);
+	isVAO = true;
 }
 
 void Chunk::draw(shader &shader)
