@@ -6,7 +6,7 @@ using namespace obj;
 
 Skybox::Skybox()
 {
-
+	skyboxShader.load("srcs/objects/skybox/skybox.vs", "srcs/objects/skybox/skybox.fs", nullptr);
 }
 
 Skybox::~Skybox()
@@ -16,13 +16,13 @@ Skybox::~Skybox()
 	// glDeleteBuffers(1, &EBO);
 }
 
-void	Skybox::draw(shader &shader, math::mat4 view, math::mat4 projection)
+void	Skybox::draw(math::mat4 view, math::mat4 projection)
 {
 	// draw skybox as last
 	glDepthFunc(GL_LEQUAL);
 	glDepthMask(GL_FALSE);
 
-	shader.use();
+	skyboxShader.use();
 	view[3][0] = 0;
 	view[3][1] = 0;// a.x a.y a.z 0
 	view[3][2] = 0;// b.x b.y b.z 0
@@ -30,12 +30,12 @@ void	Skybox::draw(shader &shader, math::mat4 view, math::mat4 projection)
 	view[0][3] = 0;// 0   0   0   0
 	view[1][3] = 0;
 	view[2][3] = 0;
-	glUniformMatrix4fv(glGetUniformLocation(shader.ID, "view"), 1, GL_FALSE, &view[0][0]);
-	glUniformMatrix4fv(glGetUniformLocation(shader.ID, "projection"), 1, GL_FALSE, &projection[0][0]);
+	glUniformMatrix4fv(glGetUniformLocation(skyboxShader.ID, "view"), 1, GL_FALSE, &view[0][0]);
+	glUniformMatrix4fv(glGetUniformLocation(skyboxShader.ID, "projection"), 1, GL_FALSE, &projection[0][0]);
 
-	shader.use();
-	shader.setMat4("projection", projection);
-	shader.setMat4("view", view);
+	skyboxShader.use();
+	skyboxShader.setMat4("projection", projection);
+	skyboxShader.setMat4("view", view);
 
 	glBindVertexArray(VAO);
 	glActiveTexture(GL_TEXTURE0);

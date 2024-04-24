@@ -19,11 +19,12 @@ class Skybox
 		Skybox();
 		~Skybox();
 
-		void	draw(shader &shader, math::mat4 view, math::mat4 projection);
+		void	draw(math::mat4 view, math::mat4 projection);
 		void	load();
 		void	setup();
 
 	private:
+		obj::shader		skyboxShader;
 		unsigned int	VAO, VBO, EBO;
 		unsigned int	textureID;
 

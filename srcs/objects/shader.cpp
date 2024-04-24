@@ -2,7 +2,16 @@
 
 using namespace obj;
 
+shader::shader() {}
+
+shader::~shader() {}
+
 shader::shader(const char* vertexPath, const char* fragmentPath, const char* geometryPath)
+{
+	load(vertexPath, fragmentPath, geometryPath);
+}
+
+void	shader::load(const char* vertexPath, const char* fragmentPath, const char* geometryPath)
 {
 	std::string vertexCode;
 	std::string fragmentCode;

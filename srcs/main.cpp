@@ -3,6 +3,7 @@
 #include "objects/camera.hpp"
 #include "objects/mesh.hpp"
 #include "objects/skybox.hpp"
+#include "world.hpp"
 #include "chunk.hpp"
 #include "noise.hpp"
 
@@ -15,7 +16,9 @@
 
 bool	skybox_active = true;
 
-float	mixValue = 0.2f;
+GLFWwindow*	glfw_init_window(void);
+void	draw(GLFWwindow* window, obj::shader &ourShader, std::vector<obj::Chunk *> &chunks, obj::Skybox &skybox, math::mat4 &model);
+
 void	framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void	mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void	scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
@@ -37,38 +40,10 @@ float lastFrame = 0.0f;
 
 int main()
 {
-	// glfw: initialize and configure
-	glfwInit();
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-#ifdef __APPLE__
-	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-#endif
-
-	// glfw window creation
-	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Scop", NULL, NULL);
-	if (window == NULL)
-	{
-		std::cout << "Failed to create GLFW window" << std::endl;
-		glfwTerminate();
+	GLFWwindow* window = glfw_init_window();
+	if (window == nullptr)
 		return -1;
-	}
-	glfwMakeContextCurrent(window);
-	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-	glfwSetCursorPosCallback(window, mouse_callback);
-	glfwSetScrollCallback(window, scroll_callback);
 
-	// tell GLFW to capture our mouse
-	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
-	// glad: load all OpenGL function pointers
-	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
-	{
-		std::cout << "Failed to initialize GLAD" << std::endl;
-		return -1;
-	}
 
 	// configure global opengl state
 	glEnable(GL_DEPTH_TEST);
@@ -90,8 +65,6 @@ int main()
     }
 
 	// SKY BOX
-	obj::shader skyboxShader("srcs/objects/skybox/skybox.vs", "srcs/objects/skybox/skybox.fs", nullptr);
-
 	obj::Skybox skybox;
 	skybox.setup();
 	skybox.load();
@@ -105,45 +78,93 @@ int main()
 
 	while (!glfwWindowShouldClose(window))
 	{
-		// per-frame time logic
-		float currentFrame = static_cast<float>(glfwGetTime());
-		deltaTime = currentFrame - lastFrame;
-		lastFrame = currentFrame;
-
-		// input
-		processInput(window);
-
-		// clear color buffer
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		
-		ourShader.use();
-		// pass projection matrix to shader (note that in this case it could change every frame)
-		math::mat4 projection = math::perspective(math::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
-		ourShader.setMat4("projection", projection);
-
-		// camera/view transformation
-		math::mat4 view = camera.GetViewMatrix();
-		ourShader.setMat4("view", view);
-
-		ourShader.setMat4("model", model);
-
-		for (auto chunk : chunks)
-        {
-            chunk->draw(ourShader);
-        }
-
-		if (skybox_active)
-			skybox.draw(skyboxShader, view, projection);
-
-		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
-		glfwSwapBuffers(window);
-		glfwPollEvents();
+		draw(	window,
+				ourShader,
+				chunks,
+				skybox,
+				model);
 	}
 
 	// glfw: terminate, clearing all previously allocated GLFW resources.
 	glfwTerminate();
 	return 0;
 }
+
+
+GLFWwindow*	glfw_init_window(void)
+{
+	// glfw: initialize and configure
+	glfwInit();
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+#ifdef __APPLE__
+	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+#endif
+
+	// glfw window creation
+	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Scop", NULL, NULL);
+	if (window == NULL)
+	{
+		std::cout << "Failed to create GLFW window" << std::endl;
+		glfwTerminate();
+		return nullptr;
+	}
+	glfwMakeContextCurrent(window);
+	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+	glfwSetCursorPosCallback(window, mouse_callback);
+	glfwSetScrollCallback(window, scroll_callback);
+
+	// tell GLFW to capture our mouse
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+	// glad: load all OpenGL function pointers
+	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+	{
+		std::cout << "Failed to initialize GLAD" << std::endl;
+		return nullptr;
+	}
+	return window;
+}
+
+void	draw(GLFWwindow* window, obj::shader &ourShader, std::vector<obj::Chunk *> &chunks, obj::Skybox &skybox, math::mat4 &model)
+{
+	// per-frame time logic
+	float currentFrame = static_cast<float>(glfwGetTime());
+	deltaTime = currentFrame - lastFrame;
+	lastFrame = currentFrame;
+
+	// input
+	processInput(window);
+
+	// clear color buffer
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	
+	ourShader.use();
+	// pass projection matrix to shader (note that in this case it could change every frame)
+	math::mat4 projection = math::perspective(math::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+	ourShader.setMat4("projection", projection);
+
+	// camera/view transformation
+	math::mat4 view = camera.GetViewMatrix();
+	ourShader.setMat4("view", view);
+
+	ourShader.setMat4("model", model);
+
+	for (auto chunk : chunks)
+	{
+		chunk->draw(ourShader);
+	}
+
+	if (skybox_active)
+		skybox.draw(view, projection);
+
+	// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
+	glfwSwapBuffers(window);
+	glfwPollEvents();
+}
+
 
 bool b_pressed = false;
 
