@@ -1,4 +1,4 @@
-#include "../../includes/math/math.hpp"
+#include "math/math.hpp"
 
 using namespace math;
 #define PRECISION 0.000000001
