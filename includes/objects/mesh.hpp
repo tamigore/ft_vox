@@ -7,7 +7,6 @@
 
 # include "vertex.hpp"
 # include "material.hpp"
-# include "face.hpp"
 # include "texture.hpp"
 # include "shader.hpp"
 # include "../noise.hpp"
@@ -40,7 +39,6 @@ class mesh
         std::vector<unsigned int>	normal_indices;
         std::vector<unsigned int>	texture_indices;
         std::vector<texture>		textures;
-        std::vector<face>			faces;
 		// material					m_material;
 
 		mesh();

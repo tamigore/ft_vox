@@ -301,7 +301,9 @@ bool	mesh::add_vertex_normal(std::string curline)
 
 bool	mesh::add_face(std::string pram)
 {
-	obj::face newface;
+	std::vector<unsigned int> vertices;
+	std::vector<unsigned int> normals;
+	std::vector<unsigned int> textures;
 	std::vector<std::string> tokens;
 	split(pram, tokens, " ");
 	for (unsigned int i = 0; i < tokens.size(); i++)
@@ -310,32 +312,31 @@ bool	mesh::add_face(std::string pram)
 		if (tokens[i].find("/") != std::string::npos)
 		{
 			split(tokens[i], face_tokens, "/");
-			newface.m_vertice_index.push_back(std::stoul(face_tokens[0]));
-			newface.m_normal_index.push_back(std::stoul(face_tokens[1]));
+			vertices.push_back(std::stoul(face_tokens[0]));
+			normals.push_back(std::stoul(face_tokens[1]));
 			if (!face_tokens[2].empty())
-				newface.m_texture_index.push_back(std::stoul(face_tokens[2]));
+				textures.push_back(std::stoul(face_tokens[2]));
 			else
-				newface.m_texture_index.push_back(0);
+				textures.push_back(0);
 		}
 		else if (tokens[i].find("//") != std::string::npos)
 		{
-			newface.m_vertice_index.push_back(std::stoul(face_tokens[0]));
-			newface.m_normal_index.push_back(0);
-			newface.m_texture_index.push_back(std::stoul(face_tokens[1]));
+			vertices.push_back(std::stoul(face_tokens[0]));
+			normals.push_back(0);
+			textures.push_back(std::stoul(face_tokens[1]));
 		}
 		else
 		{
-			newface.m_vertice_index.push_back(std::stoul(tokens[i]));
-			newface.m_normal_index.push_back(0);
-			newface.m_texture_index.push_back(0);
+			vertices.push_back(std::stoul(tokens[i]));
+			normals.push_back(0);
+			textures.push_back(0);
 		}
 	}
-	this->faces.push_back(newface);
-	for (unsigned int i = 0; i < newface.m_vertice_index.size() - 2; i++)
+	for (unsigned int i = 0; i < vertices.size() - 2; i++)
 	{
-		this->indices.push_back(newface.m_vertice_index[0] - 1);
-		this->indices.push_back(newface.m_vertice_index[i + 1] - 1);
-		this->indices.push_back(newface.m_vertice_index[i + 2] - 1);
+		this->indices.push_back(vertices[0] - 1);
+		this->indices.push_back(vertices[i + 1] - 1);
+		this->indices.push_back(vertices[i + 2] - 1);
 	}
 	return true;
 }

@@ -16,6 +16,7 @@
 #include <thread>
 #include <mutex>
 #include <algorithm>
+
 bool	skybox_active = true;
 
 GLFWwindow*	glfw_init_window(void);
@@ -43,11 +44,11 @@ float lastFrame = 0.0f;
 
 std::map<std::pair<int, int>, obj::Chunk *> chunksMap;
 
-void update_chunk(int renderDistance, std::vector<obj::Chunk *> *toDrawChunks)
+void update_chunk(int renderDistance, std::vector<obj::Chunk *> *toDrawChunks, GLFWwindow* window)
 {
 	math::vec2 lastPos = math::vec2(312312, -312321);
 	std::vector<obj::Chunk *> tmpChunks;
-	while (true)
+	while (glfwWindowShouldClose(window) == 0)
 	{
 		if (lastPos == math::vec2(camera.Position.x / 16, -camera.Position.z / 16))
 		{
@@ -109,7 +110,7 @@ int main()
 	math::mat4 model = math::mat4(1.0f); // make sure to initialize matrix to identity matrix first
 	model = math::rotate(model, math::radians(90.0f), math::vec3(1.0f, 0.0f, 0.0f));
 	model = model.translate(-10.0f, -15.0f, -5.0f);
-	std::thread thread(update_chunk, renderDistance, &toDrawChunks);
+	std::thread thread(update_chunk, renderDistance, &toDrawChunks, window);
 	while (!glfwWindowShouldClose(window))
 	{
 		draw(	window,
@@ -118,7 +119,7 @@ int main()
 				skybox,
 				model);
 	}
-
+	thread.detach();
 	// glfw: terminate, clearing all previously allocated GLFW resources.
 	glfwTerminate();
 	return 0;
@@ -183,40 +184,33 @@ void	draw(GLFWwindow* window, obj::shader &ourShader, std::vector<obj::Chunk *> 
 	math::mat4 view = camera.GetViewMatrix();
 	ourShader.setMat4("view", view);
 
-		ourShader.setMat4("model", model);
-		std::vector<std::pair<int, int>> toDelete;
-		vector_mutex.lock();
-		for (auto chunk: toDrawChunks)
+	ourShader.setMat4("model", model);
+	std::vector<std::pair<int, int>> toDelete;
+	vector_mutex.lock();
+	for (auto chunk: toDrawChunks)
+	{
+		int px = chunk->posX;
+		int py = chunk->posY; 
+		if (px < camera.Position.x / 16 - renderDistance || px > camera.Position.x / 16 + renderDistance || py < -camera.Position.z / 16 - renderDistance || py > -camera.Position.z / 16 + renderDistance)
 		{
-			int px = chunk->posX;
-			int py = chunk->posY; 
-			if (px < camera.Position.x / 16 - renderDistance || px > camera.Position.x / 16 + renderDistance || py < -camera.Position.z / 16 - renderDistance || py > -camera.Position.z / 16 + renderDistance)
-			{
-				toDelete.push_back(std::make_pair(px, py));
-				continue;
-			}
-			if (chunk->isVAO == false)
-			{
-				chunk->setupMesh();
-			}
-			chunk->draw(ourShader);
-			
+			toDelete.push_back(std::make_pair(px, py));
+			continue;
 		}
-		
-		map_mutex.lock();
+		if (chunk->isVAO == false)
+		{
+			chunk->setupMesh();
+		}
+		chunk->draw(ourShader);
+	}
+	vector_mutex.unlock();
 
-		map_mutex.unlock();
-		vector_mutex.unlock();
-		if (skybox_active)
-		{
-			skybox.draw(view, projection);
-		}
+	if (skybox_active)
+		skybox.draw(view, projection);
 
 	// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
 	glfwSwapBuffers(window);
 	glfwPollEvents();
 }
-
 
 bool b_pressed = false;
 

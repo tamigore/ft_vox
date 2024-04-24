@@ -1,52 +1,111 @@
-NAME = vox
-CC = g++ -Wall -Werror -Wextra
-CFLAGS =  -std=c++17
+################################################################################
+#                               Filename output                                #
+################################################################################
+
+NAME		=	ft_vox
+
+################################################################################
+#                               Sources filenames                              #
+################################################################################
+
+CPP_FILES = $(shell find $(SRCS_DIR) -name '*.cpp')
+C_FILES = $(shell find $(SRCS_DIR) -name '*.c')
+
+################################################################################
+#                         Sources and objects directories                      #
+################################################################################
+
+SRCS_DIR = srcs
+OBJS_DIR = objects-dependances
+DEPS_DIR = $(OBJS_DIR)
+
+################################################################################
+#                              Commands and arguments                          #
+################################################################################
+
+CC			=	g++ -std=c++17
+CFLAGS = -Llibs -Iincludes -MMD -MP 
 OPENGL = -lglut -lGLU -lGL -lglfw -lX11
-HEADER = -I./includes
+RM			=	rm -rf
 
-CPPSRCS =	main.cpp	\
-			noise.cpp	\
-			chunk.cpp	\
-			utils.cpp
+################################################################################
+#                                 Defining colors                              #
+################################################################################
 
-CSRCS =	glad.c
+_RED		=	\033[31m
+_GREEN		=	\033[32m
+_YELLOW		=	\033[33m
+_CYAN		=	\033[96m
+_NC			=	\033[0m
 
-MATH =	math.cpp	\
-		mat4.cpp	\
-		mat3.cpp	\
-		mat2.cpp	\
-		vec4.cpp	\
-		vec3.cpp	\
-		vec2.cpp
+################################################################################
+#                                    Objects                                    #
+################################################################################
 
-OBJECTS =	shader.cpp	\
-			camera.cpp	\
-			mesh.cpp	\
-			skybox.cpp
+CPP_OBJS = $(patsubst $(SRCS_DIR)/%.cpp,$(OBJS_DIR)/%.o,$(CPP_FILES))
+C_OBJS = $(patsubst $(SRCS_DIR)/%.c,$(OBJS_DIR)/%.o,$(C_FILES))
 
-csrcs =	$(addprefix srcs/, $(CSRCS))
+$(shell mkdir -p $(sort $(dir $(CPP_OBJS))) $(sort $(dir $(C_OBJS))))
 
-cppsrcs =	$(addprefix srcs/, $(CPPSRCS))			\
-			$(addprefix srcs/math/, $(MATH))		\
-			$(addprefix srcs/objects/, $(OBJECTS))
+$(OBJS_DIR)/%.o: $(SRCS_DIR)/%.c
+	@ echo "\t$(_YELLOW) compiling... $*.c$(_NC)"
+	@$(CC) $(CFLAGS) $(OPENGL) -c $< -o $@
 
-srcs = $(csrcs)
-srcs += $(cppsrcs)
+$(OBJS_DIR)/%.o: $(SRCS_DIR)/%.cpp
+	@ echo "\t$(_YELLOW) compiling... $*.cpp$(_NC)"
+	@$(CC) $(CFLAGS) $(OPENGL) -c $< -o $@
 
-objs =	$(csrcs:.c=.o)
-objs += $(cppsrcs:.cpp=.o)
+################################################################################
+#                                  Dependances                                 #
+################################################################################
 
-all: comp_obj
+CPP_DEPS = $(patsubst $(OBJS_DIR)/%.o,$(DEPS_DIR)/%.d,$(CPP_OBJS))
+C_DEPS = $(patsubst $(OBJS_DIR)/%.o,$(DEPS_DIR)/%.d,$(C_OBJS))
+DEP_FILES = $(CPP_DEPS) $(C_DEPS)
 
-comp_obj: $(srcs)
-	$(CC) $(CFLAGS) $(HEADER) $(srcs) $(OPENGL) -o $(NAME)
+$(shell mkdir -p $(sort $(dir $(DEP_FILES))))
+
+$(DEPS_DIR)/%.d: $(SRCS_DIR)/%.cpp | $(DEPS_DIR)
+	@ echo "\t$(_YELLOW) compiling... $*.d$(_NC)"
+	@$(CC) $(CFLAGS) -MM $< -MT $(@:.d=.o) -MF $@
+
+$(DEPS_DIR)/%.d: $(SRCS_DIR)/%.c | $(DEPS_DIR)
+	@ echo "\t$(_YELLOW) compiling... $*.d$(_NC)"
+	@$(CC) $(CFLAGS) -MM $< -MT $(@:.d=.o) -MF $@
+
+################################################################################
+#                                   Command                                    #
+################################################################################
+
+all: init $(NAME)
+
+init:
+	@ if test -f $(NAME);\
+		then echo "$(_CYAN)[program already created]$(_NC)";\
+		else \
+		echo "$(_YELLOW)[Initialize program]$(_NC)";\
+		$(shell mkdir -p $(sort $(dir $(CPP_OBJS))) $(sort $(dir $(C_OBJS)))) \
+	fi
+
+$(NAME): $(CPP_OBJS) $(C_OBJS)
+	@ echo "\t$(_YELLOW)[Creating program]$(_NC)"
+	@$(CC) $(CFLAGS) $(CPP_OBJS) $(C_OBJS) $(OPENGL) -o $(NAME) -ldl -lpthread
+	@ echo "$(_GREEN)[program created & ready]$(_NC)"
 
 clean:
-	@rm -rf $(NAME)
+	echo "$(_RED)[cleaning up .out & objects files]"
+	@$(RM) $(OBJS_DIR)
+	@$(RM) $(DEPS_DIR)
 
 fclean: clean
-	@rm -f $(objs)
+	@ echo "$(_RED)[cleaning up .out, objects & library files]$(_NC)"
+	@$(RM) $(NAME)
 
 re: fclean all
 
+.SILENT:
+		all
+
 .PHONY: all clean fclean re
+
+-include $(DEP_FILES)

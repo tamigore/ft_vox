@@ -11,9 +11,6 @@ Skybox::Skybox()
 
 Skybox::~Skybox()
 {
-	// glDeleteVertexArrays(1, &VAO);
-	// glDeleteBuffers(1, &VBO);
-	// glDeleteBuffers(1, &EBO);
 }
 
 void	Skybox::draw(math::mat4 view, math::mat4 projection)
