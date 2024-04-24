@@ -199,8 +199,6 @@ void mesh::setupMesh()
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)offsetof(vertex, Normal));
 	glEnableVertexAttribArray(2);	
 	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)offsetof(vertex, Texture));
-	glEnableVertexAttribArray(3);
-	glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)offsetof(vertex, Color));
 	glBindVertexArray(0);
 }
 
@@ -213,7 +211,6 @@ std::ostream&	obj::operator<<(std::ostream &output, const mesh &input)
 		output << "Position: " << input.vertices[i].Position << "\t";
 		output << "Normal: " << input.vertices[i].Normal << "\t";
 		output << "Texture: " << input.vertices[i].Texture << std::endl;
-		output << "Color: " << input.vertices[i].Color << std::endl;
 	}
 	output << "\rIndices:" << std::endl;
 	for (unsigned int i = 0; i < input.indices.size(); i++)
@@ -248,7 +245,6 @@ bool	mesh::add_vertex_position(std::string curline)
 	this->vertices[this->position_indices.size()].Position = position;
 	this->vertices[this->position_indices.size()].Normal = math::vec3(0.0);
 	this->vertices[this->position_indices.size()].Texture = math::vec2(0.0);
-	this->vertices[this->position_indices.size()].Color = math::vec3(0.0);
 	this->position_indices.push_back(this->position_indices.size());
 	return true;
 }
@@ -487,7 +483,6 @@ void	mesh::center_around_orgin()
 void	mesh::facesDuplicateVertexes()
 {
 	std::map<unsigned int, unsigned int> nbPosIndex;
-	math::vec3 color = {0.0, 0.0, 0.0};
 	std::vector<math::vec2> textures = {
 		{0.0, 0.0},
 		{0.0, 1.0},
@@ -500,7 +495,6 @@ void	mesh::facesDuplicateVertexes()
 		if (nbPosIndex.find(*it) == nbPosIndex.end())
 		{
 			nbPosIndex[*it] = 1;
-			this->vertices[*it].Color = color;
 			this->vertices[*it].Texture = textures[face % 4];
 		}
 		else
@@ -508,27 +502,8 @@ void	mesh::facesDuplicateVertexes()
 			this->vertices.push_back(this->vertices[*it]);
 			*it = this->vertices.size() - 1;
 			nbPosIndex[*it] += 1;
-			this->vertices[*it].Color = color;
 			this->vertices[*it].Texture = textures[face % 4];
 		}
 		face++;
-		if (face % 3 == 0)
-		{
-			if (color.x >= 1.0)
-				color.x = 0.0;
-			color.x += 0.1;
-		}
-		if (face % 6 == 0)
-		{
-			if (color.y >= 1.0)
-				color.y = 0.0;
-			color.y += 0.1;
-		}
-		if (face % 9 == 0)
-		{
-			if (color.z >= 1.0)
-				color.z = 0.0;
-			color.z += 0.1;
-		}
 	}
 }
