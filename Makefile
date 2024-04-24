@@ -2,6 +2,7 @@ NAME = vox
 CC = g++ -Wall -Werror -Wextra
 CFLAGS =  -std=c++17
 OPENGL = -lglut -lGLU -lGL -lglfw -lX11
+HEADER = -I./includes
 
 CPPSRCS =	main.cpp	\
 			noise.cpp	\
@@ -20,7 +21,8 @@ MATH =	math.cpp	\
 
 OBJECTS =	shader.cpp	\
 			camera.cpp	\
-			mesh.cpp
+			mesh.cpp	\
+			skybox.cpp
 
 csrcs =	$(addprefix srcs/, $(CSRCS))
 
@@ -37,7 +39,7 @@ objs += $(cppsrcs:.cpp=.o)
 all: comp_obj
 
 comp_obj: $(srcs)
-	$(CC) $(CFLAGS) $(srcs) $(OPENGL) -o $(NAME)
+	$(CC) $(CFLAGS) $(HEADER) $(srcs) $(OPENGL) -o $(NAME)
 
 clean:
 	@rm -rf $(NAME)

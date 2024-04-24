@@ -77,3 +77,16 @@ bool	validate_float(float value, float max, float min)
 		return false;
 	return true;
 }
+
+
+GLenum	channelColor(int channel)
+{
+	GLenum format;
+	if (channel == 1)
+		format = GL_RED;
+	else if (channel == 3)
+		format = GL_RGB;
+	else if (channel == 4)
+		format = GL_RGBA;
+	return format;
+}

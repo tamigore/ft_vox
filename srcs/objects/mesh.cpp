@@ -1,8 +1,8 @@
 #define STB_IMAGE_IMPLEMENTATION
 
-#include "../../includes/stb_image.h"
+#include "stb_image.h"
 
-#include "../../includes/objects/mesh.hpp"
+#include "objects/mesh.hpp"
 
 using namespace obj;
 
