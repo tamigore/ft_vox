@@ -1,11 +1,12 @@
 #include "glad/glad.h"
-#include "objects/shader.hpp"
-#include "objects/camera.hpp"
-#include "objects/mesh.hpp"
-#include "objects/skybox.hpp"
-#include "world.hpp"
-#include "chunk.hpp"
-#include "noise.hpp"
+#include "objects/Shader.hpp"
+#include "objects/Camera.hpp"
+#include "objects/Skybox.hpp"
+#include "objects/TextureLoader.hpp"
+#include "objects/TextureArray.hpp"
+// #include "World.hpp"
+#include "Chunk.hpp"
+#include "Noise.hpp"
 
 #include "stb_image.h"
 
@@ -16,11 +17,13 @@
 #include <thread>
 #include <mutex>
 #include <algorithm>
+#include <map>
+#include <filesystem>
 
 bool	skybox_active = true;
 
 GLFWwindow*	glfw_init_window(void);
-void	draw(GLFWwindow* window, obj::shader &ourShader, std::vector<obj::Chunk *> &chunks, obj::Skybox &skybox, math::mat4 &model);
+void	draw(GLFWwindow* window, obj::Shader &ourShader, std::vector<obj::Chunk *> &chunks, obj::Skybox &skybox, math::mat4 &model);
 
 void	framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void	mouse_callback(GLFWwindow* window, double xpos, double ypos);
@@ -32,7 +35,7 @@ const unsigned int SCR_WIDTH = 1920;
 const unsigned int SCR_HEIGHT = 1080;
 
 // camera
-obj::camera camera(math::vec3(0.0f, 0.0f, 3.0f));
+obj::Camera camera(math::vec3(0.0f, 0.0f, 3.0f));
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
@@ -84,20 +87,40 @@ int main()
 	if (window == nullptr)
 		return -1;
 
-
 	// configure global opengl state
 	glEnable(GL_DEPTH_TEST);
 
 	// build and compile our shader dirtUpgradezprogram
-	obj::shader ourShader("srcs/objects/textures/texture.vs", "srcs/objects/textures/texture.fs", nullptr);
+	obj::Shader ourShader("srcs/shaders/vertex_shader.vs", "srcs/shaders/fragment_shader.fs", nullptr);
+
+	obj::TextureArray textureArray;
+	obj::TextureLoader textureLoader;
+
+	bool res = textureLoader.LoadTextureArray(
+	{
+		std::filesystem::path("textures/dirt.jpg"),
+		std::filesystem::path("textures/grass.jpg"),
+		std::filesystem::path("textures/stone.jpg"),
+		std::filesystem::path("textures/bedrock.jpg"),
+		std::filesystem::path("textures/sand.jpg"),
+		std::filesystem::path("textures/oak_wood_side.jpg"),
+		std::filesystem::path("textures/leaves_2.jpg"),
+		std::filesystem::path("textures/water.jpg"),
+		std::filesystem::path("textures/snow.jpg"),
+		std::filesystem::path("textures/iron_ore.jpg"),
+		std::filesystem::path("textures/gold_ore.jpg"),
+		std::filesystem::path("textures/diamond_ore.jpg"),
+		std::filesystem::path("textures/UNKNOWN.jpg"),
+	});
+	if (res)
+		textureArray = textureLoader.GetTextureArray();
+	else
+		return -1;
+	
 
 	std::vector<obj::Chunk *> chunks;
 	int renderDistance = 10;
 	obj::Chunk *chunk = new obj::Chunk(312312,321312);
-	chunk->add_texture("dirt.png", "srcs/objects/textures/minecraft/dirt");
-	chunk->add_texture("grassSide2.png", "srcs/objects/textures/minecraft");
-	chunk->add_texture("grassTop.png", "srcs/objects/textures/minecraft");
-
 
 	// SKY BOX
 	obj::Skybox skybox;
@@ -113,11 +136,8 @@ int main()
 	std::thread thread(update_chunk, renderDistance, &toDrawChunks, window);
 	while (!glfwWindowShouldClose(window))
 	{
-		draw(	window,
-				ourShader,
-				toDrawChunks,
-				skybox,
-				model);
+		glBindTexture(GL_TEXTURE_2D_ARRAY, textureArray.id);
+		draw(window, ourShader, toDrawChunks, skybox, model);
 	}
 	thread.detach();
 	// glfw: terminate, clearing all previously allocated GLFW resources.
@@ -162,7 +182,7 @@ GLFWwindow*	glfw_init_window(void)
 	return window;
 }
 
-void	draw(GLFWwindow* window, obj::shader &ourShader, std::vector<obj::Chunk *> &toDrawChunks, obj::Skybox &skybox, math::mat4 &model)
+void	draw(GLFWwindow* window, obj::Shader &ourShader, std::vector<obj::Chunk *> &toDrawChunks, obj::Skybox &skybox, math::mat4 &model)
 {
 	// per-frame time logic
 	float currentFrame = static_cast<float>(glfwGetTime());
@@ -185,6 +205,7 @@ void	draw(GLFWwindow* window, obj::shader &ourShader, std::vector<obj::Chunk *> 
 	ourShader.setMat4("view", view);
 
 	ourShader.setMat4("model", model);
+	ourShader.setInt("TextureArraySize", 6);
 	std::vector<std::pair<int, int>> toDelete;
 	vector_mutex.lock();
 	for (auto chunk: toDrawChunks)
@@ -214,6 +235,8 @@ void	draw(GLFWwindow* window, obj::shader &ourShader, std::vector<obj::Chunk *> 
 
 bool b_pressed = false;
 
+float speed = 5.0f;
+
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 void processInput(GLFWwindow *window)
 {
@@ -221,13 +244,17 @@ void processInput(GLFWwindow *window)
 		glfwSetWindowShouldClose(window, true);
 
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		camera.ProcessKeyboard(obj::FORWARD, deltaTime * 5.0f);
+		camera.ProcessKeyboard(obj::FORWARD, deltaTime * speed);
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		camera.ProcessKeyboard(obj::BACKWARD, deltaTime * 5.0f);
+		camera.ProcessKeyboard(obj::BACKWARD, deltaTime * speed);
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-		camera.ProcessKeyboard(obj::LEFT, deltaTime * 5.0f);
+		camera.ProcessKeyboard(obj::LEFT, deltaTime * speed);
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-		camera.ProcessKeyboard(obj::RIGHT, deltaTime * 5.0f);
+		camera.ProcessKeyboard(obj::RIGHT, deltaTime * speed);
+	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+		camera.ProcessKeyboard(obj::UP, deltaTime * speed);
+	if (glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS)
+		camera.ProcessKeyboard(obj::DOWN, deltaTime * speed);
 
 	if (glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS)
 	{
@@ -239,6 +266,16 @@ void processInput(GLFWwindow *window)
 		skybox_active = !skybox_active;
 		std::cout << "skybox_active: " << skybox_active << std::endl;
 	}
+
+	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+		speed = 10.0f;
+	else
+		speed = 5.0f;
+
+	if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
+		speed = 2.5f;
+	else
+		speed = 5.0f;
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
