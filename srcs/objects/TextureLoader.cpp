@@ -70,7 +70,6 @@ void TextureLoader::Init()
 {
 	if (!glfwGetCurrentContext())
 		std::cout << "TextureLoader cannot be used before a glfw context has been initialized" << std::endl;
-	// stbi_set_flip_vertically_on_load(false);
 	isReady = true;
 }
 

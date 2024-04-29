@@ -16,7 +16,7 @@ uniform mat4	projection;
 
 void main()
 {
-	gl_Position = projection * view * vec4(aPos, 1.0);
+	gl_Position = projection * view * vec4(aPos.xzy, 1.0);
 	Texture = vec2(aTexCoord.x , -aTexCoord.y );
 	shadow = 1.0f;
 	if (aface == 0 || aface == 4)

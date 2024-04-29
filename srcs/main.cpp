@@ -4,7 +4,6 @@
 #include "objects/Skybox.hpp"
 #include "objects/TextureLoader.hpp"
 #include "objects/TextureArray.hpp"
-// #include "World.hpp"
 #include "Chunk.hpp"
 #include "Noise.hpp"
 
@@ -23,7 +22,7 @@
 bool	skybox_active = true;
 
 GLFWwindow*	glfw_init_window(void);
-void	draw(GLFWwindow* window, obj::Shader &ourShader, std::vector<obj::Chunk *> &chunks, obj::Skybox &skybox, math::mat4 &model);
+void	draw(GLFWwindow* window, obj::Shader &ourShader, obj::Skybox &skybox);
 
 void	framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void	mouse_callback(GLFWwindow* window, double xpos, double ypos);
@@ -39,46 +38,57 @@ obj::Camera camera(math::vec3(0.0f, 0.0f, 3.0f));
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
-std::mutex map_mutex;
-std::mutex vector_mutex;
+std::mutex chunk_mutex;
 // timing
 float deltaTime = 0.0f;	// time between current frame and last frame
 float lastFrame = 0.0f;
 
-std::map<std::pair<int, int>, obj::Chunk *> chunksMap;
+const unsigned int renderDistance = 5;
+std::map<std::pair<int, int>, obj::Chunk *>	chunksMap;
 
-void update_chunk(int renderDistance, std::vector<obj::Chunk *> *toDrawChunks, GLFWwindow* window)
+
+void	update_chunk(GLFWwindow* window, math::vec2 lastPos)
 {
-	math::vec2 lastPos = math::vec2(312312, -312321);
-	std::vector<obj::Chunk *> tmpChunks;
-	while (glfwWindowShouldClose(window) == 0)
+	std::vector<obj::Chunk *>					tmpDrawChunks;
+
+	if (lastPos == math::vec2(camera.Position.x / 16, -camera.Position.y / 16))
+		return;
+	chunk_mutex.lock();
+	std::map<std::pair<int, int>, obj::Chunk *>::iterator chunk;
+	for (chunk = chunksMap.begin(); chunk != chunksMap.end(); chunk++)
 	{
-		if (lastPos == math::vec2(camera.Position.x / 16, -camera.Position.z / 16))
+		if (std::abs(chunk->first.first - camera.Position.x / 16) > renderDistance ||
+			std::abs(chunk->first.second - camera.Position.z / 16) > renderDistance)
 		{
-			continue;
+			// std::cout << "Chunk deleted at: " << chunk->first.first << " " << chunk->first.second << std::endl;
+			delete chunk->second;
+			// std::cout << "deleted" << std::endl;
+			chunksMap.erase(chunk);
+			// std::cout << "erased" << std::endl;
+			chunk = chunksMap.begin();
 		}
-		for (int i = camera.Position.x / 16 - renderDistance; i <= camera.Position.x / 16 + renderDistance; i++)
-		{
-			for (int j = -camera.Position.z / 16 - renderDistance; j <= -camera.Position.z / 16+ renderDistance; j++)
-			{
-				map_mutex.lock();
-				if (chunksMap.find(std::make_pair(i, j)) == chunksMap.end())
-				{
-					obj::Chunk *chunk = new obj::Chunk(i, j);
-					chunksMap[std::make_pair(i, j)] = chunk;
-					tmpChunks.push_back(chunk);
-					map_mutex.unlock();
-					continue;
-				}
-				map_mutex.unlock();
-				tmpChunks.push_back(chunksMap[std::make_pair(i, j)]);
-			}
-		}
-		vector_mutex.lock();
-		*toDrawChunks = tmpChunks;
-		vector_mutex.unlock();
-		lastPos = math::vec2(camera.Position.x / 16, -camera.Position.z / 16);
 	}
+	chunk_mutex.unlock();
+	for (int i = 0; i < renderDistance; i++)
+	{
+		for (int j = 0; j < renderDistance; j++)
+		{
+			if (i + j > renderDistance)
+				continue;
+			int x = camera.Position.x / 16 + i;
+			int y = camera.Position.z / 16 + j;
+			chunk_mutex.lock();
+			std::map<std::pair<int, int>, obj::Chunk *>::iterator found = chunksMap.find(std::make_pair(x, y));
+			if (found == chunksMap.end())
+			{
+				obj::Chunk *chunk = new obj::Chunk(x, y);
+				chunksMap[std::make_pair(x, y)] = chunk;
+				// std::cout << "Chunk created at: " << x << " " << y << std::endl;
+			}
+			chunk_mutex.unlock();
+		}
+	}
+	lastPos = math::vec2(camera.Position.x / 16, -camera.Position.y / 16);
 }
 
 int main()
@@ -115,12 +125,11 @@ int main()
 	if (res)
 		textureArray = textureLoader.GetTextureArray();
 	else
+	{
+		std::cout << "Failed to load texture array" << std::endl;
 		return -1;
+	}
 	
-
-	std::vector<obj::Chunk *> chunks;
-	int renderDistance = 10;
-	obj::Chunk *chunk = new obj::Chunk(312312,321312);
 
 	// SKY BOX
 	obj::Skybox skybox;
@@ -128,21 +137,61 @@ int main()
 	skybox.load();
 
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-	std::vector<obj::Chunk *> toDrawChunks;	
+
 	// render loop
-	math::mat4 model = math::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-	model = math::rotate(model, math::radians(90.0f), math::vec3(1.0f, 0.0f, 0.0f));
-	model = model.translate(-10.0f, -15.0f, -5.0f);
-	std::thread thread(update_chunk, renderDistance, &toDrawChunks, window);
+	// std::thread	thread(update_chunk, window);
+	math::vec2 lastPos = math::vec2(1, 1);
 	while (!glfwWindowShouldClose(window))
 	{
 		glBindTexture(GL_TEXTURE_2D_ARRAY, textureArray.id);
-		draw(window, ourShader, toDrawChunks, skybox, model);
+		update_chunk(window, lastPos);
+		draw(window, ourShader, skybox);
 	}
-	thread.detach();
+	// thread.detach();
 	// glfw: terminate, clearing all previously allocated GLFW resources.
 	glfwTerminate();
 	return 0;
+}
+
+void	draw(GLFWwindow* window, obj::Shader &ourShader, obj::Skybox &skybox)
+{
+	// per-frame time logic
+	float currentFrame = static_cast<float>(glfwGetTime());
+	deltaTime = currentFrame - lastFrame;
+	lastFrame = currentFrame;
+	// input
+	processInput(window);
+
+	// clear color buffer
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	ourShader.use();
+	// pass projection matrix to shader (note that in this case it could change every frame)
+	math::mat4 projection = math::perspective(math::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+	ourShader.setMat4("projection", projection);
+
+	// camera/view transformation
+	math::mat4 view = camera.GetViewMatrix();
+	ourShader.setMat4("view", view);
+
+	ourShader.setInt("TextureArraySize", 6);
+
+	chunk_mutex.lock();
+	for (auto chunk: chunksMap)
+	{
+		if (chunk.second->isVAO == false)
+		{
+			chunk.second->setupMesh();
+		}
+		chunk.second->draw(ourShader);
+	}
+	chunk_mutex.unlock();
+
+	if (skybox_active)
+		skybox.draw(view, projection);
+
+	// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
+	glfwSwapBuffers(window);
+	glfwPollEvents();
 }
 
 GLFWwindow*	glfw_init_window(void)
@@ -180,57 +229,6 @@ GLFWwindow*	glfw_init_window(void)
 		return nullptr;
 	}
 	return window;
-}
-
-void	draw(GLFWwindow* window, obj::Shader &ourShader, std::vector<obj::Chunk *> &toDrawChunks, obj::Skybox &skybox, math::mat4 &model)
-{
-	// per-frame time logic
-	float currentFrame = static_cast<float>(glfwGetTime());
-	deltaTime = currentFrame - lastFrame;
-	lastFrame = currentFrame;
-	int renderDistance = 10;
-	// input
-	processInput(window);
-
-	// clear color buffer
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	
-	ourShader.use();
-	// pass projection matrix to shader (note that in this case it could change every frame)
-	math::mat4 projection = math::perspective(math::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
-	ourShader.setMat4("projection", projection);
-
-	// camera/view transformation
-	math::mat4 view = camera.GetViewMatrix();
-	ourShader.setMat4("view", view);
-
-	ourShader.setMat4("model", model);
-	ourShader.setInt("TextureArraySize", 6);
-	std::vector<std::pair<int, int>> toDelete;
-	vector_mutex.lock();
-	for (auto chunk: toDrawChunks)
-	{
-		int px = chunk->posX;
-		int py = chunk->posY; 
-		if (px < camera.Position.x / 16 - renderDistance || px > camera.Position.x / 16 + renderDistance || py < -camera.Position.z / 16 - renderDistance || py > -camera.Position.z / 16 + renderDistance)
-		{
-			toDelete.push_back(std::make_pair(px, py));
-			continue;
-		}
-		if (chunk->isVAO == false)
-		{
-			chunk->setupMesh();
-		}
-		chunk->draw(ourShader);
-	}
-	vector_mutex.unlock();
-
-	if (skybox_active)
-		skybox.draw(view, projection);
-
-	// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
-	glfwSwapBuffers(window);
-	glfwPollEvents();
 }
 
 bool b_pressed = false;
