@@ -13,11 +13,13 @@
 #include <vector>
 #include <GLFW/glfw3.h>
 #include <iostream>
-#include <thread>
 #include <mutex>
 #include <algorithm>
 #include <map>
 #include <filesystem>
+
+#include <future>
+#include <thread>
 
 bool	skybox_active = true;
 
@@ -43,49 +45,90 @@ std::mutex chunk_mutex;
 float deltaTime = 0.0f;	// time between current frame and last frame
 float lastFrame = 0.0f;
 
-const unsigned int renderDistance = 5;
+const unsigned int renderDistance = 15;
 std::map<std::pair<int, int>, obj::Chunk *>	chunksMap;
 
-
-void	update_chunk(GLFWwindow* window, math::vec2 lastPos)
+void	generate(int x, int y)
 {
-	std::vector<obj::Chunk *>					tmpDrawChunks;
-
-	if (lastPos == math::vec2(camera.Position.x / 16, -camera.Position.y / 16))
-		return;
 	chunk_mutex.lock();
-	std::map<std::pair<int, int>, obj::Chunk *>::iterator chunk;
+	std::map<std::pair<int, int>, obj::Chunk *>::iterator found = chunksMap.find(std::make_pair(x, y));
+	if (found == chunksMap.end())
+	{
+		obj::Chunk *chunk = new obj::Chunk(x, y);
+		chunksMap[std::make_pair(x, y)] = chunk;
+	}
+	chunk_mutex.unlock();
+}
+
+void	delete_chunk()
+{
+	std::map<std::pair<int, int>, obj::Chunk *>::iterator	chunk;
+	std::vector<std::pair<int, int>>						set;
+	chunk_mutex.lock();
 	for (chunk = chunksMap.begin(); chunk != chunksMap.end(); chunk++)
 	{
 		if (std::abs(chunk->first.first - camera.Position.x / 16) > renderDistance ||
 			std::abs(chunk->first.second - camera.Position.z / 16) > renderDistance)
 		{
-			// std::cout << "Chunk deleted at: " << chunk->first.first << " " << chunk->first.second << std::endl;
-			delete chunk->second;
-			// std::cout << "deleted" << std::endl;
-			chunksMap.erase(chunk);
-			// std::cout << "erased" << std::endl;
-			chunk = chunksMap.begin();
+			set.push_back(chunk->first);
 		}
 	}
+	for (auto key : set) { 
+		delete chunksMap[key];
+		chunksMap.erase(key); 
+	} 
 	chunk_mutex.unlock();
+}
+
+// std::vector<std::pair<int, int>>	delete_chunk()
+// {
+// 	std::map<std::pair<int, int>, obj::Chunk *>::iterator	chunk;
+// 	std::vector<std::pair<int, int>>						set;
+// 	chunk_mutex.lock();
+// 	for (chunk = chunksMap.begin(); chunk != chunksMap.end(); chunk++)
+// 	{
+// 		if (std::abs(chunk->first.first - camera.Position.x / 16) > renderDistance ||
+// 			std::abs(chunk->first.second - camera.Position.z / 16) > renderDistance)
+// 		{
+// 			set.push_back(chunk->first);
+// 		}
+// 	}
+// 	chunk_mutex.unlock();
+// 	return set;
+// }
+
+void	update_chunk(GLFWwindow* window, math::vec2 lastPos)
+{
+	if (lastPos == math::vec2(camera.Position.x / 16, -camera.Position.y / 16))
+		return;
+	// std::future<std::vector<std::pair<int, int>>> ret = std::async(&delete_chunk);
+	// std::vector<std::pair<int, int>> set = ret.get();
+
+	// chunk_mutex.lock();
+	// for (auto key : set) { 
+	// 	delete chunksMap[key];
+	// 	chunksMap.erase(key); 
+	// } 
+	// chunk_mutex.unlock();
+
+	delete_chunk();
 	for (int i = 0; i < renderDistance; i++)
 	{
 		for (int j = 0; j < renderDistance; j++)
 		{
-			if (i + j > renderDistance)
-				continue;
 			int x = camera.Position.x / 16 + i;
 			int y = camera.Position.z / 16 + j;
-			chunk_mutex.lock();
-			std::map<std::pair<int, int>, obj::Chunk *>::iterator found = chunksMap.find(std::make_pair(x, y));
-			if (found == chunksMap.end())
-			{
-				obj::Chunk *chunk = new obj::Chunk(x, y);
-				chunksMap[std::make_pair(x, y)] = chunk;
-				// std::cout << "Chunk created at: " << x << " " << y << std::endl;
-			}
-			chunk_mutex.unlock();
+			int x2 = camera.Position.x / 16 - i;
+			int y2 = camera.Position.z / 16 - j;
+
+			std::thread	generation0(generate, x, y);
+			std::thread	generation1(generate, x2, y);
+			std::thread	generation2(generate, x, y2);
+			std::thread	generation3(generate, x2, y2);
+			generation0.join();
+			generation1.join();
+			generation2.join();
+			generation3.join();
 		}
 	}
 	lastPos = math::vec2(camera.Position.x / 16, -camera.Position.y / 16);
@@ -129,7 +172,6 @@ int main()
 		std::cout << "Failed to load texture array" << std::endl;
 		return -1;
 	}
-	
 
 	// SKY BOX
 	obj::Skybox skybox;
