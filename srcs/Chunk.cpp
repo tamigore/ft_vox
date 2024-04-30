@@ -3,61 +3,9 @@
 
 using namespace obj;
 
-Chunk::	Chunk(int x, int y) : posX(x), posY(y)
+Chunk::Chunk(int x, int y) : posX(x), posY(y)
 {
-	obj::Noise noise(42, 16);
-	obj::Noise noise2(3131, 16);
-	int size_x = 16;
-	int size_y = 16;
-	int size_z = 256;
-	unsigned char chunk[size_x * size_y * size_z];
-	for (int x = 0; x < size_x; x++){
-		for (int y = 0; y < size_y; y++){
-			float px, py;
-			px = posX * size_x + x;
-			py = posY * size_y + y;
-			int perlin = 2 + 10 * noise.Generate2D(math::vec2(px * 0.0047893218043 + 10000, py *0.003123123123123 + 10000), 4, 0.5);
-			int perlinoise = 30 * noise2.Generate2D(math::vec2(px * 0.0047893218043 + 10000, py *0.003123123123123 + 10000), 4, 0.5);
-			for (int z = 0; z < size_z; z++)
-			{
-				if (z < perlin * 0.3)
-					chunk[z + y * size_z + x * size_y * size_z] = 3;
-				else if (z < perlin)
-					chunk[z + y * size_z + x * size_y * size_z] = 2;
-				else if (z < perlinoise * 0.9)
-					chunk[z + y * size_z + x * size_y * size_z] = 1;
-				else
-					chunk[z + y * size_z + x * size_y * size_z] = 0;
-			}
-		}
-	}
-	for (int x = 0; x < size_x; x++){
-		for (int y = 0; y < size_y; y++){
-			for (int z = 0; z < size_z; z++){
-				if (!chunk[z + y * size_z + x * size_y * size_z])
-					continue;
-				int position;
-				position = (z - 1) + y * size_z + x * size_y * size_z;
-				if (z == 0 || !chunk[position])
-					createFaces(posX * size_x + x, posY * size_y + y, z, position, 0.0, chunk[z + y * size_z + x * size_y * size_z]);
-				position = (z + 1) + y * size_z + x * size_y * size_z;
-				if (z == 255 || !chunk[position])
-					createFaces(posX * size_x + x, posY * size_y + y, z, position, 1.0, chunk[z + y * size_z + x * size_y * size_z]);
-				position = z + (y - 1) * size_z + x * size_y * size_z;
-				if (y == 0 || !chunk[position])
-					createFaces(posX * size_x + x, posY * size_y + y, z, position, 2.0, chunk[z + y * size_z + x * size_y * size_z]);
-				position = z + (y + 1) * size_z + x * size_y * size_z;
-				if (y == 15 || !chunk[position])
-					createFaces(posX * size_x + x, posY * size_y + y, z, position, 3.0, chunk[z + y * size_z + x * size_y * size_z]);
-				position = z + y * size_z + (x - 1) * size_y * size_z;
-				if (x == 0 || !chunk[position])
-					createFaces(posX * size_x + x, posY * size_y + y, z, position, 4.0, chunk[z + y * size_z + x * size_y * size_z]);
-				position = z + y * size_z + (x + 1) * size_y * size_z;
-				if (x == 15 || !chunk[position])
-					createFaces(posX * size_x + x, posY * size_y + y, z, position, 5.0, chunk[z + y * size_z + x * size_y * size_z]);
-			}
-		}
-	}
+	chunk = new unsigned char[size_x * size_y * size_z];
 }
 
 Chunk::~Chunk()
@@ -65,9 +13,10 @@ Chunk::~Chunk()
 	glDeleteVertexArrays(1, &VAO);
 	glDeleteBuffers(1, &VBO);
 	glDeleteBuffers(1, &EBO);
+	delete[] chunk;
 }
 
-void Chunk::createFaces( int x, int y, int z, int position, int face, int block)
+void	Chunk::createFaces( int x, int y, int z, int position, int face, int block)
 {
 	math::vec3 angle[4];
 	(void)position;
@@ -143,7 +92,7 @@ void Chunk::createFaces( int x, int y, int z, int position, int face, int block)
 	vertices.push_back(tmp);
 }
 
-void Chunk::setupMesh()
+void	Chunk::setupMesh()
 {
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
@@ -183,7 +132,7 @@ void Chunk::setupMesh()
 	isVAO = true;
 }
 
-void Chunk::draw(Shader &shader)
+void	Chunk::draw(Shader &shader)
 {
     // draw chunk
 	// unsigned int diffuseNr  = 1;
@@ -216,53 +165,58 @@ void Chunk::draw(Shader &shader)
 	glActiveTexture(GL_TEXTURE0);
 }
 
+void	Chunk::generateFaces(void)
+{
+	for (int x = 0; x < size_x; x++){
+		for (int y = 0; y < size_y; y++){
+			for (int z = 0; z < size_z; z++){
+				if (!chunk[z + y * size_z + x * size_y * size_z])
+					continue;
+				int position;
+				position = (z - 1) + y * size_z + x * size_y * size_z;
+				if (z == 0 || !chunk[position])
+					createFaces(posX * size_x + x, posY * size_y + y, z, position, 0.0, chunk[z + y * size_z + x * size_y * size_z]);
+				position = (z + 1) + y * size_z + x * size_y * size_z;
+				if (z == 255 || !chunk[position])
+					createFaces(posX * size_x + x, posY * size_y + y, z, position, 1.0, chunk[z + y * size_z + x * size_y * size_z]);
+				position = z + (y - 1) * size_z + x * size_y * size_z;
+				if (y == 0 || !chunk[position])
+					createFaces(posX * size_x + x, posY * size_y + y, z, position, 2.0, chunk[z + y * size_z + x * size_y * size_z]);
+				position = z + (y + 1) * size_z + x * size_y * size_z;
+				if (y == 15 || !chunk[position])
+					createFaces(posX * size_x + x, posY * size_y + y, z, position, 3.0, chunk[z + y * size_z + x * size_y * size_z]);
+				position = z + y * size_z + (x - 1) * size_y * size_z;
+				if (x == 0 || !chunk[position])
+					createFaces(posX * size_x + x, posY * size_y + y, z, position, 4.0, chunk[z + y * size_z + x * size_y * size_z]);
+				position = z + y * size_z + (x + 1) * size_y * size_z;
+				if (x == 15 || !chunk[position])
+					createFaces(posX * size_x + x, posY * size_y + y, z, position, 5.0, chunk[z + y * size_z + x * size_y * size_z]);
+			}
+		}
+	}
+}
 
-// bool	Chunk::add_texture(const char *name, const char *path)
-// {
-// 	Texture new_texture;
-// 	new_texture.id = TextureFromFile(name, path);
-// 	// new_texture.type = "texture_diffuse";
-// 	// new_texture.path = std::string(path) + "/" + std::string(path);
-// 	this->textures.push_back(new_texture);
-// 	return true;
-// }
-
-// unsigned int	Chunk::TextureFromFile(const char *path, const std::string &directory)
-// {
-// 	std::string filename = std::string(path);
-// 	filename = directory + '/' + filename;
-
-// 	unsigned int textureID;
-// 	glGenTextures(1, &textureID);
-
-// 	int width, height, nrComponents;
-// 	unsigned char *data = stbi_load(filename.c_str(), &width, &height, &nrComponents, 0);
-// 	if (data)
-// 	{
-// 		GLenum format;
-// 		if (nrComponents == 1)
-// 			format = GL_RED;
-// 		else if (nrComponents == 3)
-// 			format = GL_RGB;
-// 		else if (nrComponents == 4)
-// 			format = GL_RGBA;
-
-// 		glBindTexture(GL_TEXTURE_2D, textureID);
-// 		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-// 		glGenerateMipmap(GL_TEXTURE_2D);
-
-// 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-// 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-// 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-// 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-// 		stbi_image_free(data);
-// 	}
-// 	else
-// 	{
-// 		std::cout << "Texture failed to load at path: " << path << std::endl;
-// 		stbi_image_free(data);
-// 	}
-
-// 	return textureID;
-// }
+void	Chunk::generateChunk(int posX, int posY, Noise noise)
+{
+	float px, py, pz;
+	for (int x = 0; x < size_x; x++){
+		px = posX * size_x + x;
+		for (int y = 0; y < size_y; y++){
+			py = posY * size_y + y;
+			float perlin = noise.noise(px * 0.01, py * 0.01, 0);
+			for (int z = 0; z < size_z; z++)
+			{
+				pz = size_z + z;
+				// std::cout << perlin << std::endl;
+				if (perlin > 0.5)
+					chunk[z + y * size_z + x * size_y * size_z] = 3;
+				else if (perlin > 0)
+					chunk[z + y * size_z + x * size_y * size_z] = 2;
+				else if (z < perlin > -0.5)
+					chunk[z + y * size_z + x * size_y * size_z] = 1;
+				else
+					chunk[z + y * size_z + x * size_y * size_z] = 0;
+			}
+		}
+	}
+}

@@ -4,6 +4,7 @@
 #include "objects/Skybox.hpp"
 #include "objects/TextureLoader.hpp"
 #include "objects/TextureArray.hpp"
+#include "ChunkGenerator.hpp"
 #include "Chunk.hpp"
 #include "Noise.hpp"
 
@@ -21,16 +22,15 @@
 #include <future>
 #include <thread>
 
-bool	skybox_active = true;
-
 GLFWwindow*	glfw_init_window(void);
-void	draw(GLFWwindow* window, obj::Shader &ourShader, obj::Skybox &skybox);
+void		draw(GLFWwindow* window, obj::Shader &ourShader, obj::Skybox &skybox);
 
-void	framebuffer_size_callback(GLFWwindow* window, int width, int height);
-void	mouse_callback(GLFWwindow* window, double xpos, double ypos);
-void	scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-void	processInput(GLFWwindow *window);
+void		framebuffer_size_callback(GLFWwindow* window, int width, int height);
+void		mouse_callback(GLFWwindow* window, double xpos, double ypos);
+void		scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
+void		processInput(GLFWwindow *window);
 
+bool	skybox_active = true;
 // settings
 const unsigned int SCR_WIDTH = 1920;
 const unsigned int SCR_HEIGHT = 1080;
@@ -45,17 +45,20 @@ std::mutex chunk_mutex;
 float deltaTime = 0.0f;	// time between current frame and last frame
 float lastFrame = 0.0f;
 
-const unsigned int renderDistance = 15;
+const unsigned int renderDistance = 5;
 std::map<std::pair<int, int>, obj::Chunk *>	chunksMap;
+ChunkGenerator	generator = ChunkGenerator(42);
 
-void	generate(int x, int y)
+void	generate(int x, int y, obj::Noise noise)
 {
 	chunk_mutex.lock();
 	std::map<std::pair<int, int>, obj::Chunk *>::iterator found = chunksMap.find(std::make_pair(x, y));
 	if (found == chunksMap.end())
 	{
-		obj::Chunk *chunk = new obj::Chunk(x, y);
-		chunksMap[std::make_pair(x, y)] = chunk;
+		// obj::Chunk *chunk = new obj::Chunk(x, y);
+		// chunk->generateChunk(x, y, noise);
+		// chunk->generateFaces();
+		chunksMap[std::make_pair(x, y)] = generator.generateChunk(x, y);
 	}
 	chunk_mutex.unlock();
 }
@@ -110,7 +113,7 @@ void	update_chunk(GLFWwindow* window, math::vec2 lastPos)
 	// 	chunksMap.erase(key); 
 	// } 
 	// chunk_mutex.unlock();
-
+	obj::Noise	myNoise(42, 16);
 	delete_chunk();
 	for (int i = 0; i < renderDistance; i++)
 	{
@@ -121,10 +124,10 @@ void	update_chunk(GLFWwindow* window, math::vec2 lastPos)
 			int x2 = camera.Position.x / 16 - i;
 			int y2 = camera.Position.z / 16 - j;
 
-			std::thread	generation0(generate, x, y);
-			std::thread	generation1(generate, x2, y);
-			std::thread	generation2(generate, x, y2);
-			std::thread	generation3(generate, x2, y2);
+			std::thread	generation0(generate, x, y, myNoise);
+			std::thread	generation1(generate, x2, y, myNoise);
+			std::thread	generation2(generate, x, y2, myNoise);
+			std::thread	generation3(generate, x2, y2, myNoise);
 			generation0.join();
 			generation1.join();
 			generation2.join();
@@ -308,12 +311,17 @@ void processInput(GLFWwindow *window)
 	}
 
 	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-		speed = 10.0f;
+		speed = 20.0f;
 	else
 		speed = 5.0f;
 
 	if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
 		speed = 2.5f;
+	else
+		speed = 5.0f;
+	
+	if (glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS)
+		speed = 1.0f;
 	else
 		speed = 5.0f;
 }

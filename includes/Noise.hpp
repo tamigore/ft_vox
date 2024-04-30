@@ -12,12 +12,14 @@ class Noise
 {
 	public:
 		Noise();
-		Noise(uint seed, uint size);
 		Noise(uint seed);
+		Noise(uint seed, uint size);
 		~Noise();
 
-		float Generate2D(math::vec2 pos, int octave, float factor);
-		float Generate3D(math::vec3 pos, int octave, float factor);
+		double	fade(double t);
+		double	lerp(double t, double a, double b);
+		double	grad(int hash, double x, double y, double z);
+		double	noise(double x, double y, double z);
 
 	private:
 		uint seed;

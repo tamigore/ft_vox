@@ -18,4 +18,8 @@ void main()
 		FragColor = texture(TextureArray, vec3(Texture, blockid)) * vec4(0.4, 0.8, 0.6, 0);
 	else
 		FragColor = texture(TextureArray, vec3(Texture, blockid));
+	if (face <= 1)
+		FragColor *= 0.5;
+	else if (face <= 2)
+		FragColor *= 0.5;
 }
