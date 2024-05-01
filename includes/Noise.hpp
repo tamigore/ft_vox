@@ -16,15 +16,17 @@ class Noise
 		Noise(uint seed, uint size);
 		~Noise();
 
-		double	fade(double t);
-		double	lerp(double t, double a, double b);
-		double	grad(int hash, double x, double y, double z);
-		double	noise(double x, double y, double z);
+		float	Generate2D(math::vec2 pos, float scale, float amplitude, float persistence, int octaves);
+		float	Generate3D(math::vec3 pos, float scale, float amplitude, float persistence, int octaves);
+
+
 
 	private:
-		uint seed;
-		uint size = 16;
-		std::vector<uint> tab;
+		double	noise(double x, double y, double z);
+		
+		uint				seed;
+		uint				size = 16;
+		std::vector<uint>	tab;
 };
 
 }

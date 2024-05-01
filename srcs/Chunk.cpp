@@ -78,8 +78,8 @@ void	Chunk::createFaces( int x, int y, int z, int position, int face, int block)
 	indices.push_back(vertices.size() + 3);
 	tmp.TextureCoordonates = texture[0];
 	tmp.Position = angle[0];
-    tmp.face = face;
-    tmp.block = block;
+    tmp.Face = face;
+    tmp.Block = block - 1;
 	vertices.push_back(tmp);
 	tmp.TextureCoordonates = texture[1];
 	tmp.Position = angle[1];
@@ -112,53 +112,15 @@ void	Chunk::setupMesh()
     glEnableVertexAttribArray(2);	
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, TextureCoordonates));
     glEnableVertexAttribArray(3);	
-    glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, face));
+    glVertexAttribIPointer(3, 1, GL_INT, sizeof(Vertex), (void*)offsetof(Vertex, Face));
     glEnableVertexAttribArray(4);
-    glVertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, block));
-    // vertex tangent
-    // glEnableVertexAttribArray(3);
-    // glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)offsetof(vertex, Tangent));
-    // // vertex bitangent
-    // glEnableVertexAttribArray(4);
-    // glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)offsetof(vertex, Bitangent));
-    // // ids
-    // glEnableVertexAttribArray(5);
-    // glVertexAttribIPointer(5, 4, GL_INT, sizeof(vertex), (void*)offsetof(vertex, m_BoneIDs));
-
-    // // weights
-    // glEnableVertexAttribArray(6);
-    // glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)offsetof(vertex, m_Weights));
+    glVertexAttribIPointer(4, 1, GL_INT, sizeof(Vertex), (void*)offsetof(Vertex, Block));
     glBindVertexArray(0);
 	isVAO = true;
 }
 
 void	Chunk::draw(Shader &shader)
 {
-    // draw chunk
-	// unsigned int diffuseNr  = 1;
-	// unsigned int specularNr = 1;
-	// unsigned int normalNr   = 1;
-	// unsigned int heightNr   = 1;
-	// for(unsigned int i = 0; i < textures.size(); i++)
-	// {
-	// 	glActiveTexture(GL_TEXTURE0 + i);
-	// 	std::string name = textures[i].type;
-	// 	std::string number;
-	// 	if(name == "diffuse")
-	// 		number = std::to_string(diffuseNr++);
-	// 	else if(name == "specular")
-	// 		number = std::to_string(specularNr++);
-	// 	else if(name == "normal")
-	// 		number = std::to_string(normalNr++);
-	// 	else if(name == "height")
-	// 		number = std::to_string(heightNr++);
-
-	// 	// now set the sampler to the correct texture unit
-	// 	glUniform1i(glGetUniformLocation(shader.ID, (name + number).c_str()), i);
-	// 	// and finally bind the texture
-	// 	glBindTexture(GL_TEXTURE_2D, textures[i].id);
-	// }
-
     glBindVertexArray(VAO);
     glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
@@ -175,48 +137,47 @@ void	Chunk::generateFaces(void)
 				int position;
 				position = (z - 1) + y * size_z + x * size_y * size_z;
 				if (z == 0 || !chunk[position])
-					createFaces(posX * size_x + x, posY * size_y + y, z, position, 0.0, chunk[z + y * size_z + x * size_y * size_z]);
+					createFaces(posX * size_x + x, posY * size_y + y, z, position, 0, chunk[z + y * size_z + x * size_y * size_z]);
 				position = (z + 1) + y * size_z + x * size_y * size_z;
 				if (z == 255 || !chunk[position])
-					createFaces(posX * size_x + x, posY * size_y + y, z, position, 1.0, chunk[z + y * size_z + x * size_y * size_z]);
+					createFaces(posX * size_x + x, posY * size_y + y, z, position, 1, chunk[z + y * size_z + x * size_y * size_z]);
 				position = z + (y - 1) * size_z + x * size_y * size_z;
 				if (y == 0 || !chunk[position])
-					createFaces(posX * size_x + x, posY * size_y + y, z, position, 2.0, chunk[z + y * size_z + x * size_y * size_z]);
+					createFaces(posX * size_x + x, posY * size_y + y, z, position, 2, chunk[z + y * size_z + x * size_y * size_z]);
 				position = z + (y + 1) * size_z + x * size_y * size_z;
 				if (y == 15 || !chunk[position])
-					createFaces(posX * size_x + x, posY * size_y + y, z, position, 3.0, chunk[z + y * size_z + x * size_y * size_z]);
+					createFaces(posX * size_x + x, posY * size_y + y, z, position, 3, chunk[z + y * size_z + x * size_y * size_z]);
 				position = z + y * size_z + (x - 1) * size_y * size_z;
 				if (x == 0 || !chunk[position])
-					createFaces(posX * size_x + x, posY * size_y + y, z, position, 4.0, chunk[z + y * size_z + x * size_y * size_z]);
+					createFaces(posX * size_x + x, posY * size_y + y, z, position, 4, chunk[z + y * size_z + x * size_y * size_z]);
 				position = z + y * size_z + (x + 1) * size_y * size_z;
 				if (x == 15 || !chunk[position])
-					createFaces(posX * size_x + x, posY * size_y + y, z, position, 5.0, chunk[z + y * size_z + x * size_y * size_z]);
+					createFaces(posX * size_x + x, posY * size_y + y, z, position, 5, chunk[z + y * size_z + x * size_y * size_z]);
 			}
 		}
 	}
+	isCreated	= true;
 }
 
-void	Chunk::generateChunk(int posX, int posY, Noise noise)
-{
-	float px, py, pz;
-	for (int x = 0; x < size_x; x++){
-		px = posX * size_x + x;
-		for (int y = 0; y < size_y; y++){
-			py = posY * size_y + y;
-			float perlin = noise.noise(px * 0.01, py * 0.01, 0);
-			for (int z = 0; z < size_z; z++)
-			{
-				pz = size_z + z;
-				// std::cout << perlin << std::endl;
-				if (perlin > 0.5)
-					chunk[z + y * size_z + x * size_y * size_z] = 3;
-				else if (perlin > 0)
-					chunk[z + y * size_z + x * size_y * size_z] = 2;
-				else if (z < perlin > -0.5)
-					chunk[z + y * size_z + x * size_y * size_z] = 1;
-				else
-					chunk[z + y * size_z + x * size_y * size_z] = 0;
-			}
-		}
-	}
-}
+Chunk	*Chunk::getWest() { return west; }
+Chunk	*Chunk::getEast() { return east; }
+Chunk	*Chunk::getNorth() { return north; }
+Chunk	*Chunk::getSouth() { return south; }
+
+void	Chunk::setWest(Chunk *c) { west = c; }
+void	Chunk::setEast(Chunk *c) { east = c; }
+void	Chunk::setNorth(Chunk *c) { north = c; }
+void	Chunk::setSouth(Chunk *c) { south = c; }
+
+// Chunk	*Chunk::getChunk(Chunk *chunk, int x, int y)
+// {
+// 	while (x != posX && y != posY)
+// 	{
+// 		if (x < posX)
+// 		{
+// 			if (west)
+// 				;
+// 			return nullptr;
+// 		}
+// 	}
+// }

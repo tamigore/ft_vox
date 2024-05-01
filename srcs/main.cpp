@@ -49,16 +49,67 @@ const unsigned int renderDistance = 5;
 std::map<std::pair<int, int>, obj::Chunk *>	chunksMap;
 ChunkGenerator	generator = ChunkGenerator(42);
 
-void	generate(int x, int y, obj::Noise noise)
+void	generate(int i)
+{
+	for (int j = 0; j < renderDistance * 2; j++)
+	{
+		int x = camera.Position.x / 16 + i - renderDistance;
+		int y = camera.Position.z / 16 + j - renderDistance;
+		chunk_mutex.lock();
+		std::map<std::pair<int, int>, obj::Chunk *>::iterator found = chunksMap.find(std::make_pair(x, y));
+		if (found == chunksMap.end())
+		{
+			std::cout << "Generating chunk " << x << " " << y << std::endl;
+			obj::Chunk *chunk = generator.generateChunk(x, y);
+			found = chunksMap.find(std::make_pair(x + 1, y));
+			if (found != chunksMap.end())
+			{
+				chunk->setEast(found->second);
+				found->second->setWest(chunk);
+			}
+			found = chunksMap.find(std::make_pair(x - 1, y));
+			if (found != chunksMap.end())
+			{
+				chunk->setWest(found->second);
+				found->second->setEast(chunk);
+			}
+			found = chunksMap.find(std::make_pair(x, y + 1));
+			if (found != chunksMap.end())
+			{
+				chunk->setNorth(found->second);
+				found->second->setSouth(chunk);
+			}
+			found = chunksMap.find(std::make_pair(x, y - 1));
+			if (found != chunksMap.end())
+			{
+				chunk->setSouth(found->second);
+				found->second->setNorth(chunk);
+			}
+			chunksMap[std::make_pair(x, y)] = chunk;
+		}
+		else
+		{
+			std::cout << "Chunk already exists " << x << " " << y << std::endl;
+		}
+		chunk_mutex.unlock();
+	}
+}
+
+void createFaces()
 {
 	chunk_mutex.lock();
-	std::map<std::pair<int, int>, obj::Chunk *>::iterator found = chunksMap.find(std::make_pair(x, y));
-	if (found == chunksMap.end())
+	for (auto chunk: chunksMap)
 	{
-		// obj::Chunk *chunk = new obj::Chunk(x, y);
-		// chunk->generateChunk(x, y, noise);
-		// chunk->generateFaces();
-		chunksMap[std::make_pair(x, y)] = generator.generateChunk(x, y);
+		if (chunk.second->isCreated == false)
+		{
+			// if (chunk.second->getWest() != nullptr &&
+			// 	chunk.second->getEast() != nullptr &&
+			// 	chunk.second->getNorth() != nullptr &&
+			// 	chunk.second->getSouth() != nullptr)
+			// {
+				chunk.second->generateFaces();
+			// }
+		}
 	}
 	chunk_mutex.unlock();
 }
@@ -83,58 +134,16 @@ void	delete_chunk()
 	chunk_mutex.unlock();
 }
 
-// std::vector<std::pair<int, int>>	delete_chunk()
-// {
-// 	std::map<std::pair<int, int>, obj::Chunk *>::iterator	chunk;
-// 	std::vector<std::pair<int, int>>						set;
-// 	chunk_mutex.lock();
-// 	for (chunk = chunksMap.begin(); chunk != chunksMap.end(); chunk++)
-// 	{
-// 		if (std::abs(chunk->first.first - camera.Position.x / 16) > renderDistance ||
-// 			std::abs(chunk->first.second - camera.Position.z / 16) > renderDistance)
-// 		{
-// 			set.push_back(chunk->first);
-// 		}
-// 	}
-// 	chunk_mutex.unlock();
-// 	return set;
-// }
-
-void	update_chunk(GLFWwindow* window, math::vec2 lastPos)
+void	update_chunk()
 {
-	if (lastPos == math::vec2(camera.Position.x / 16, -camera.Position.y / 16))
-		return;
-	// std::future<std::vector<std::pair<int, int>>> ret = std::async(&delete_chunk);
-	// std::vector<std::pair<int, int>> set = ret.get();
-
-	// chunk_mutex.lock();
-	// for (auto key : set) { 
-	// 	delete chunksMap[key];
-	// 	chunksMap.erase(key); 
-	// } 
-	// chunk_mutex.unlock();
-	obj::Noise	myNoise(42, 16);
 	delete_chunk();
-	for (int i = 0; i < renderDistance; i++)
+	for (int i = 0; i < renderDistance * 2; i++)
 	{
-		for (int j = 0; j < renderDistance; j++)
-		{
-			int x = camera.Position.x / 16 + i;
-			int y = camera.Position.z / 16 + j;
-			int x2 = camera.Position.x / 16 - i;
-			int y2 = camera.Position.z / 16 - j;
-
-			std::thread	generation0(generate, x, y, myNoise);
-			std::thread	generation1(generate, x2, y, myNoise);
-			std::thread	generation2(generate, x, y2, myNoise);
-			std::thread	generation3(generate, x2, y2, myNoise);
-			generation0.join();
-			generation1.join();
-			generation2.join();
-			generation3.join();
-		}
+		std::thread	generation0(generate, i);
+		generation0.join();
 	}
-	lastPos = math::vec2(camera.Position.x / 16, -camera.Position.y / 16);
+	std::thread	create(createFaces);
+	create.join();
 }
 
 int main()
@@ -185,12 +194,16 @@ int main()
 
 	// render loop
 	// std::thread	thread(update_chunk, window);
-	math::vec2 lastPos = math::vec2(1, 1);
+	int lastX = 1;
+	int lastY = 1;
 	while (!glfwWindowShouldClose(window))
 	{
 		glBindTexture(GL_TEXTURE_2D_ARRAY, textureArray.id);
-		update_chunk(window, lastPos);
+		if (lastX != int(camera.Position.x / 16) || lastY != int(camera.Position.y / 16))
+			update_chunk();
 		draw(window, ourShader, skybox);
+		lastX = camera.Position.x / 16;
+		lastY = camera.Position.y / 16;
 	}
 	// thread.detach();
 	// glfw: terminate, clearing all previously allocated GLFW resources.
@@ -243,8 +256,8 @@ GLFWwindow*	glfw_init_window(void)
 {
 	// glfw: initialize and configure
 	glfwInit();
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 #ifdef __APPLE__

@@ -15,31 +15,50 @@ namespace obj
 
 class Chunk
 {
-public:
-	Chunk(int x, int y);
-	~Chunk();
+	private:
+		Chunk	*west = nullptr;
+		Chunk	*east = nullptr;
+		Chunk	*north = nullptr;
+		Chunk	*south = nullptr;
 
-	void	generateChunk(int posX, int posY, Noise noise);
-	void	generateFaces(void);
-	void	setupMesh();
-	void	draw(Shader &shader);
+		unsigned int VAO, VBO, EBO;
 
-	bool 	isVAO=false;
-	int		posX;
-	int		posY;
+		std::vector<Vertex>			vertices;
+		std::vector<unsigned int>	indices;
 
-private:
-	const int	size_x = 16;
-	const int	size_y = 16;
-	const int	size_z = 256;
+		void	createFaces( int x, int y, int z, int position, int face, int block);
 
-	unsigned int VAO, VBO, EBO;
+	public:
+		Chunk(int x, int y);
+		~Chunk();
 
-	std::vector<Vertex>			vertices;
-	std::vector<unsigned int>	indices;
-	unsigned char				*chunk;
+		void	generateFaces(void);
+		void	setupMesh();
+		void	draw(Shader &shader);
 
-	void	createFaces( int x, int y, int z, int position, int face, int block);
+		bool 	isVAO=false;
+		bool 	isCreated=false;
+
+		int		posX;
+		int		posY;
+
+		const int	size_x = 16;
+		const int	size_y = 16;
+		const int	size_z = 256;
+
+		unsigned char	*chunk;
+
+		Chunk	*getWest();
+		Chunk	*getEast();
+		Chunk	*getNorth();
+		Chunk	*getSouth();
+
+		void	setWest(Chunk *c);
+		void	setEast(Chunk *c);
+		void	setNorth(Chunk *c);
+		void	setSouth(Chunk *c);
+
+		// Chunk	*getChunk(Chunk *chunk, int x, int y);
 };
 
 }

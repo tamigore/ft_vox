@@ -3,6 +3,24 @@
 using namespace math;
 #define PRECISION 0.000000001
 
+double	math::fade(double t)
+{
+	return t * t * t * (t * (t * 6 - 15) + 10);
+}
+
+double	math::lerp(double t, double a, double b)
+{
+	return a + t * (b - a);
+}
+
+double	math::grad(int hash, double x, double y, double z)
+{
+	int h = hash & 15;
+	double u = h < 8 ? x : y;
+	double v = h < 4 ? y : (h == 12 || h == 14 ? x : z);
+	return ((h & 1) == 0 ? u : -u) + ((h & 2) == 0 ? v : -v);
+}
+
 
 float	math::radians(float degrees)
 {

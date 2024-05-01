@@ -22,12 +22,12 @@ typedef enum BlockType
 //	STRUCTURES
 };
 
-struct Bock
-{
-	BlockType	type;
-	Mesh		mesh;
-	Texture		texture;
-	Normals		normals;
-};
+// struct Bock
+// {
+// 	BlockType	type;
+// 	Mesh		mesh;
+// 	Texture		texture;
+// 	Normals		normals;
+// };
 
 #endif

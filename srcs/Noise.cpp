@@ -8,6 +8,8 @@ using namespace obj;
 
 Noise::Noise() {}
 
+Noise::~Noise() {}
+
 Noise::Noise(uint seed) : seed(seed)
 {
 	tab.resize(size * size);
@@ -27,26 +29,6 @@ Noise::Noise(uint seed, uint input_size) : seed(seed)
 	tab.insert(tab.end(), tab.begin(), tab.end());
 }
 
-Noise::~Noise() {}
-
-double	Noise::fade(double t)
-{
-	return t * t * t * (t * (t * 6 - 15) + 10);
-}
-
-double	Noise::lerp(double t, double a, double b)
-{
-	return a + t * (b - a);
-}
-
-double	Noise::grad(int hash, double x, double y, double z)
-{
-	int h = hash & 15;
-	double u = h < 8 ? x : y;
-	double v = h < 4 ? y : (h == 12 || h == 14 ? x : z);
-	return ((h & 1) == 0 ? u : -u) + ((h & 2) == 0 ? v : -v);
-}
-
 double	Noise::noise(double x, double y, double z)
 {
 	// Find unit cube that contains point
@@ -60,9 +42,9 @@ double	Noise::noise(double x, double y, double z)
 	z -= std::floor(z);
 
 	// Compute fade curves for x, y, z
-	double u = fade(x);
-	double v = fade(y);
-	double w = fade(z);
+	double u = math::fade(x);
+	double v = math::fade(y);
+	double w = math::fade(z);
 
 	// Hash coordinates of the 8 cube corners
 	int A = tab[X] + Y;
@@ -73,16 +55,52 @@ double	Noise::noise(double x, double y, double z)
 	int BB = tab[B + 1] + Z;
 
 	// Interpolate values
-	return	lerp(w,
-				lerp(v,
-					lerp(u,
-						grad(tab[AA], x, y, z),
-						grad(tab[BA], x - 1, y, z)),
-					lerp(u, grad(tab[AB], x, y - 1, z),
-						grad(tab[BB], x - 1, y - 1, z))),
-				lerp(v,
-					lerp(u, grad(tab[AA + 1], x, y, z - 1),
-						grad(tab[BA + 1], x - 1, y, z - 1)),
-					lerp(u, grad(tab[AB + 1], x, y - 1, z - 1),
-						grad(tab[BB + 1], x - 1, y - 1, z - 1))));
+	return	math::lerp(w,
+				math::lerp(v,
+					math::lerp(u,
+						math::grad(tab[AA], x, y, z),
+						math::grad(tab[BA], x - 1, y, z)),
+					math::lerp(u, math::grad(tab[AB], x, y - 1, z),
+						math::grad(tab[BB], x - 1, y - 1, z))),
+				math::lerp(v,
+					math::lerp(u, math::grad(tab[AA + 1], x, y, z - 1),
+						math::grad(tab[BA + 1], x - 1, y, z - 1)),
+					math::lerp(u, math::grad(tab[AB + 1], x, y - 1, z - 1),
+						math::grad(tab[BB + 1], x - 1, y - 1, z - 1))));
+}
+
+float	Noise::Generate2D(math::vec2 pos, float scale, float amplitude, float persistence, int octaves)
+{
+	float total = 0.0f;
+	float frequency = scale;
+	float amplitudeFactor = 1.0f;
+	float maxAmplitude = 0.0f;
+
+	for (int i = 0; i < octaves; i++)
+	{
+		total += noise(pos.x * frequency, pos.y * frequency, 0.0) * amplitudeFactor;
+		maxAmplitude += amplitudeFactor;
+		frequency *= 2.0f;
+		amplitudeFactor *= persistence;
+	}
+
+	return total / maxAmplitude * amplitude;
+}
+
+float	Noise::Generate3D(math::vec3 pos, float scale, float amplitude, float persistence, int octaves)
+{
+	float total = 0.0f;
+	float frequency = scale;
+	float amplitudeFactor = 1.0f;
+	float maxAmplitude = 0.0f;
+
+	for (int i = 0; i < octaves; i++)
+	{
+		total += noise(pos.x * frequency, pos.y * frequency, pos.z * frequency) * amplitudeFactor;
+		maxAmplitude += amplitudeFactor;
+		frequency *= 2.0f;
+		amplitudeFactor *= persistence;
+	}
+
+	return total / maxAmplitude * amplitude;
 }
