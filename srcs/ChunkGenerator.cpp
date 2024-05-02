@@ -75,27 +75,23 @@ obj::Chunk	*ChunkGenerator::generateChunk(int posX, int posY)
 	for (int x = 0; x < res->size_x; x++)
 	{
 		px = posX * res->size_x + x;
-		std::thread t([this, res, x, px, posY]()
+		for (int y = 0; y < res->size_y; y++)
 		{
-			for (int y = 0; y < res->size_y; y++)
+			float py = posY * res->size_y + y;
+			int bedrock = bedrockGenerator(px, py);
+			int continent = continentaleGenerator(px, py);
+			for (int z = 0; z < res->size_z; z++)
 			{
-				float py = posY * res->size_y + y;
-				int bedrock = bedrockGenerator(px, py);
-				int continent = continentaleGenerator(px, py);
-				for (int z = 0; z < res->size_z; z++)
-				{
-					if (z < bedrock)
-						res->chunk[z + y * res->size_z + x * res->size_y * res->size_z] = BlockType::bedrock;
-					else if (z < continent)
-						res->chunk[z + y * res->size_z + x * res->size_y * res->size_z] = BlockType::stone;
-					else if (z < 100)
-						res->chunk[z + y * res->size_z + x * res->size_y * res->size_z] = BlockType::water;
-					else
-						res->chunk[z + y * res->size_z + x * res->size_y * res->size_z] = BlockType::air;
-				}
+				if (z < bedrock)
+					res->chunk[z + y * res->size_z + x * res->size_y * res->size_z] = BlockType::bedrock;
+				else if (z < continent)
+					res->chunk[z + y * res->size_z + x * res->size_y * res->size_z] = BlockType::stone;
+				else if (z < 100)
+					res->chunk[z + y * res->size_z + x * res->size_y * res->size_z] = BlockType::water;
+				else
+					res->chunk[z + y * res->size_z + x * res->size_y * res->size_z] = BlockType::air;
 			}
-		});
-		t.join();
+		}
 	}
 	return res;
 }
