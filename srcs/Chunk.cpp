@@ -121,14 +121,19 @@ void	Chunk::setupMesh()
 
 void	Chunk::draw(Shader &shader)
 {
-    glBindVertexArray(VAO);
-    glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
-    glBindVertexArray(0);
+	glBindVertexArray(VAO);
+	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+	glBindVertexArray(0);
 	glActiveTexture(GL_TEXTURE0);
 }
 
 void	Chunk::generateFaces(void)
 {
+	Chunk	*west = getWest();
+	Chunk	*east = getEast();
+	Chunk	*north = getNorth();
+	Chunk	*south = getSouth();
+
 	for (int x = 0; x < size_x; x++){
 		for (int y = 0; y < size_y; y++){
 			for (int z = 0; z < size_z; z++){
@@ -156,7 +161,7 @@ void	Chunk::generateFaces(void)
 			}
 		}
 	}
-	isCreated	= true;
+	isCreated = true;
 }
 
 Chunk	*Chunk::getWest() { return west; }
