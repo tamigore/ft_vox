@@ -61,6 +61,7 @@ math::mat4	Camera::GetViewMatrix()
 
 void	Camera::ProcessKeyboard(camera_movement direction, float deltaTime)
 {
+	mutex.lock();
 	float velocity = this->MovementSpeed * deltaTime;
 	if (direction == FORWARD)
 		this->Position += this->Front * velocity;
@@ -74,6 +75,7 @@ void	Camera::ProcessKeyboard(camera_movement direction, float deltaTime)
 		this->Position -= this->Up * velocity;
 	if (direction == UP)
 		this->Position += this->Up * velocity;
+	mutex.unlock();
 }
 
 void	Camera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch)

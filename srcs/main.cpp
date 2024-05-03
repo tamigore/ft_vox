@@ -7,7 +7,7 @@
 #include "ChunkGenerator.hpp"
 #include "Chunk.hpp"
 #include "Noise.hpp"
-
+#include "Profiler.hpp"
 #include "stb_image.h"
 
 #include <unistd.h>
@@ -173,7 +173,9 @@ void	generate(int x, int y, std::map<std::pair<int, int>, obj::Chunk *> *chunksM
 	std::map<std::pair<int, int>, obj::Chunk *>::iterator found = chunksMap->find(std::make_pair(x, y));
 	if (found == chunksMap->end())
 	{
+		Profiler::StartTracking("generate()");
 		chunk = generator.generateChunk(x, y);
+		Profiler::StopTracking("generate()");	
 		found = chunksMap->find(std::make_pair(x - 1, y));
 		if (found != chunksMap->end())
 		{
@@ -201,19 +203,20 @@ void	generate(int x, int y, std::map<std::pair<int, int>, obj::Chunk *> *chunksM
 		(*chunksMap)[std::make_pair(x, y)] = chunk;
 	}
 	chunk_mutex.unlock();
+
 }
 
-void	delete_chunk(std::map<std::pair<int, int>, obj::Chunk *>	*chunksMap)
+void	delete_chunk(std::map<std::pair<int, int>, obj::Chunk *>	*chunksMap, int camX, int camY)
 {
 	std::map<std::pair<int, int>, obj::Chunk *>::iterator	chunk;
 	std::vector<std::pair<int, int>>						set;
 	chunk_mutex.lock();
 	for (chunk = chunksMap->begin(); chunk != chunksMap->end(); chunk++)
 	{
-		if (chunk->first.first >= camera.Position.x - renderDistance &&
-			chunk->first.first <= camera.Position.x + renderDistance &&
-			chunk->first.second <= camera.Position.y - renderDistance &&
-			chunk->first.second <= camera.Position.y + renderDistance)
+		if (chunk->first.first >= camX - renderDistance &&
+			chunk->first.first <= camX + renderDistance &&
+			chunk->first.second <= camY - renderDistance &&
+			chunk->first.second <= camY + renderDistance)
 		{
 			set.push_back(chunk->first);
 		}
@@ -237,23 +240,27 @@ void update_thread(std::vector<obj::Chunk *> **stable_state, GLFWwindow *window)
 
 	std::vector<std::thread>			generation;
 	std::vector<std::pair<int, int>>	buffer;
-
+	int camX, camY;
 	int g_pos = 0;
-	int	last_x = camera.Position.x  + 1;
-	int	last_y = camera.Position.z  + 1;
+	int	last_x = camX  + 13213;
+	int	last_y = camY  + 13213;
 
 	while (!glfwWindowShouldClose(window))
 	{
-		if ((last_x == int(camera.Position.x / 16)) && (last_y == int(camera.Position.z / 16)))
+		camera.mutex.lock();
+		camX = camera.Position.x / 16;
+		camY = camera.Position.z / 16;
+		camera.mutex.unlock();
+		if (last_x == camX && last_y == camY)
 			continue;
-		last_x = camera.Position.x / 16;
-		last_y = camera.Position.z / 16;
+		last_x = camX;
+		last_y = camY;
 		for (int i = 0; i < renderDistance * 2; i++)
 		{
 			for (int j = 0; j < renderDistance * 2; j++)
 			{
-				int posX = camera.Position.x / 16 + i - renderDistance;
-				int posY = camera.Position.z / 16 + j - renderDistance;
+				int posX = camX + i - renderDistance;
+				int posY = camY + j - renderDistance;
 				chunk_mutex.lock();
 				if (chunksMap.find(std::make_pair(posX, posY)) == chunksMap.end())
 				{
@@ -302,7 +309,7 @@ void update_thread(std::vector<obj::Chunk *> **stable_state, GLFWwindow *window)
 		tmp_state = new std::vector<obj::Chunk *>();
 
 		// std::cout << "del" << std::endl;
-		delete_chunk(&chunksMap);
+		delete_chunk(&chunksMap, camX, camY);
 		// std::cout << "deleted" << std::endl;
 	}
 }
@@ -312,7 +319,7 @@ int main()
 	GLFWwindow* window = glfw_init_window();
 	if (window == nullptr)
 		return -1;
-
+	Profiler::SetSaveOn();
 	// configure global opengl state
 	glEnable(GL_DEPTH_TEST);
 
@@ -420,8 +427,8 @@ GLFWwindow*	glfw_init_window(void)
 {
 	// glfw: initialize and configure
 	glfwInit();
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 #ifdef __APPLE__

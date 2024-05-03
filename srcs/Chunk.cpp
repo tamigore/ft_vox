@@ -1,6 +1,6 @@
 #include "stb_image.h"
 #include "Chunk.hpp"
-
+#include "Profiler.hpp"
 using namespace obj;
 
 Chunk::Chunk(int x, int y) : posX(x), posY(y)
@@ -133,6 +133,7 @@ void	Chunk::draw(Shader &shader)
 
 void	Chunk::generateFaces(void)
 {
+	Profiler::StartTracking("generateFaces");
 	// Chunk	*west = getWest();
 	// Chunk	*east = getEast();
 	// Chunk	*north = getNorth();
@@ -166,6 +167,7 @@ void	Chunk::generateFaces(void)
 		}
 	}
 	isCreated = true;
+	Profiler::StopTracking("generateFaces");
 }
 
 Chunk	*Chunk::getWest() { return west; }
