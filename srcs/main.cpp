@@ -45,6 +45,10 @@ bool firstMouse = true;
 float deltaTime = 0.0f;	// time between current frame and last frame
 float lastFrame = 0.0f;
 
+std::mutex camMutex;
+int stableCamX = 0;
+int stableCamY = 0;
+
 // const unsigned int renderDistance = 5;
 // std::map<std::pair<int, int>, obj::Chunk *>	chunksMap;
 // ChunkGenerator generator = ChunkGenerator(42);
@@ -165,6 +169,9 @@ ChunkGenerator generator = ChunkGenerator(42);
 std::mutex	chunk_mutex;
 std::mutex	stable_mutex;
 
+std::mutex	toDeleteVao_mutex;
+std::vector<unsigned int> toDeleteVAO;
+
 void	generate(int x, int y, std::map<std::pair<int, int>, obj::Chunk *> *chunksMap)
 {
 	obj::Chunk *chunk = nullptr;
@@ -173,9 +180,9 @@ void	generate(int x, int y, std::map<std::pair<int, int>, obj::Chunk *> *chunksM
 	std::map<std::pair<int, int>, obj::Chunk *>::iterator found = chunksMap->find(std::make_pair(x, y));
 	if (found == chunksMap->end())
 	{
-		Profiler::StartTracking("generate()");
+		// Profiler::StartTracking("generate()");
 		chunk = generator.generateChunk(x, y);
-		Profiler::StopTracking("generate()");	
+		// Profiler::StopTracking("generate()");	
 		found = chunksMap->find(std::make_pair(x - 1, y));
 		if (found != chunksMap->end())
 		{
@@ -213,22 +220,30 @@ void	delete_chunk(std::map<std::pair<int, int>, obj::Chunk *>	*chunksMap, int ca
 	chunk_mutex.lock();
 	for (chunk = chunksMap->begin(); chunk != chunksMap->end(); chunk++)
 	{
-		if (chunk->first.first >= camX - renderDistance &&
-			chunk->first.first <= camX + renderDistance &&
-			chunk->first.second <= camY - renderDistance &&
-			chunk->first.second <= camY + renderDistance)
+		if ((chunk->first.first < (camX - (int)renderDistance)) ||
+			(chunk->first.first > (camX + (int)renderDistance) )||
+			(chunk->first.second < (camY - (int)renderDistance)) ||
+			(chunk->first.second > (camY + (int)renderDistance)))
 		{
 			set.push_back(chunk->first);
 		}
 	}
 	for (auto key : set)
 	{ 
-		std::cout << "Deleting Chunk: " << key.first << " " << key.second << std::endl;
+		obj::Chunk* chunk = chunksMap->at(key);
+		if (chunk->isCreated)
+		{
+			toDeleteVao_mutex.lock();
+
+			toDeleteVAO.push_back(chunksMap->at(key)->getVAO());
+			toDeleteVAO.push_back(chunksMap->at(key)->getVBO());
+			toDeleteVAO.push_back(chunksMap->at(key)->getEBO());
+
+			toDeleteVao_mutex.unlock();
+		}
 		// if ((chunksMap->at(key)))
-		delete chunksMap->at(key);
-		std::cout << "Deleted" << std::endl;
-		chunksMap->erase(key); 
-		std::cout << "Erased" << std::endl;
+		delete chunk;
+		chunksMap->erase(key);
 	} 
 	chunk_mutex.unlock();
 }
@@ -242,25 +257,27 @@ void update_thread(std::vector<obj::Chunk *> **stable_state, GLFWwindow *window)
 	std::vector<std::pair<int, int>>	buffer;
 	int camX, camY;
 	int g_pos = 0;
-	int	last_x = camX  + 13213;
-	int	last_y = camY  + 13213;
+	int	last_x = 13213;
+	int	last_y = 3213;
 
 	while (!glfwWindowShouldClose(window))
 	{
-		camera.mutex.lock();
-		camX = camera.Position.x / 16;
-		camY = camera.Position.z / 16;
-		camera.mutex.unlock();
+		camMutex.lock();
+		camX = stableCamX/ 16;
+		camY = stableCamY / 16;
+		camMutex.unlock();
 		if (last_x == camX && last_y == camY)
 			continue;
 		last_x = camX;
 		last_y = camY;
-		for (int i = 0; i < renderDistance * 2; i++)
+		std::cout << "cam pos: " << camX << " " << camY << std::endl;
+		for (int i = 0; i <= renderDistance * 2; i++)
 		{
-			for (int j = 0; j < renderDistance * 2; j++)
+			for (int j = 0; j <= renderDistance * 2; j++)
 			{
 				int posX = camX + i - renderDistance;
 				int posY = camY + j - renderDistance;
+				std::cout << "is in " << posX << " " << posY << std::endl;
 				chunk_mutex.lock();
 				if (chunksMap.find(std::make_pair(posX, posY)) == chunksMap.end())
 				{
@@ -308,9 +325,9 @@ void update_thread(std::vector<obj::Chunk *> **stable_state, GLFWwindow *window)
 		// std::cout << "new" << std::endl;
 		tmp_state = new std::vector<obj::Chunk *>();
 
-		// std::cout << "del" << std::endl;
+		std::cout << "in del" << std::endl;
 		delete_chunk(&chunksMap, camX, camY);
-		// std::cout << "deleted" << std::endl;
+		std::cout << "on deleted" << std::endl;
 	}
 }
 
@@ -319,7 +336,7 @@ int main()
 	GLFWwindow* window = glfw_init_window();
 	if (window == nullptr)
 		return -1;
-	Profiler::SetSaveOn();
+	// Profiler::SetSaveOn();
 	// configure global opengl state
 	glEnable(GL_DEPTH_TEST);
 
@@ -367,6 +384,24 @@ int main()
 	// render loop
 	while (!glfwWindowShouldClose(window))
 	{
+		camMutex.lock();
+		stableCamX = camera.Position.x;
+		stableCamY = camera.Position.z;
+		camMutex.unlock();
+
+		toDeleteVao_mutex.lock();
+		for (int i = 0; i < toDeleteVAO.size(); i += 3)
+		{
+			unsigned int vao = toDeleteVAO[i];
+			unsigned int vbo = toDeleteVAO[i + 1];
+			unsigned int ebo = toDeleteVAO[i + 2];
+			glDeleteVertexArrays(1, &vao);
+			glDeleteBuffers(1, &vbo);
+			glDeleteBuffers(1, &ebo);
+		}
+		toDeleteVAO.clear();
+		toDeleteVao_mutex.unlock();
+		toDeleteVAO.clear();
 		glBindTexture(GL_TEXTURE_2D_ARRAY, textureArray.id);
 		draw(window, ourShader, skybox, stable_state);
 	}

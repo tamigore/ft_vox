@@ -74,7 +74,7 @@ void	Camera::ProcessKeyboard(camera_movement direction, float deltaTime)
 	if (direction == DOWN)
 		this->Position -= this->Up * velocity;
 	if (direction == UP)
-		this->Position += this->Up * velocity;
+		this->Position += math::vec3(0, 1, 0) * velocity;
 	mutex.unlock();
 }
 

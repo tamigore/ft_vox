@@ -10,12 +10,12 @@ Chunk::Chunk(int x, int y) : posX(x), posY(y)
 
 Chunk::~Chunk()
 {
-	if (isCreated)
-	{
-		glDeleteVertexArrays(1, &VAO);
-		glDeleteBuffers(1, &VBO);
-		glDeleteBuffers(1, &EBO);
-	}
+	// if (isCreated)
+	// {
+	// 	glDeleteVertexArrays(1, &VAO);
+	// 	glDeleteBuffers(1, &VBO);
+	// 	glDeleteBuffers(1, &EBO);
+	// }
 	if (chunk)
 		delete[] chunk;
 }
@@ -133,7 +133,7 @@ void	Chunk::draw(Shader &shader)
 
 void	Chunk::generateFaces(void)
 {
-	Profiler::StartTracking("generateFaces");
+	// Profiler::StartTracking("generateFaces");
 	// Chunk	*west = getWest();
 	// Chunk	*east = getEast();
 	// Chunk	*north = getNorth();
@@ -167,7 +167,7 @@ void	Chunk::generateFaces(void)
 		}
 	}
 	isCreated = true;
-	Profiler::StopTracking("generateFaces");
+	// Profiler::StopTracking("generateFaces");
 }
 
 Chunk	*Chunk::getWest() { return west; }

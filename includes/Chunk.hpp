@@ -58,6 +58,10 @@ class Chunk
 		void	setNorth(Chunk *c);
 		void	setSouth(Chunk *c);
 
+		int getVAO() { return VAO; }
+		int getVBO() { return VBO; }
+		int getEBO() { return EBO; }
+
 		// Chunk	*getChunk(Chunk *chunk, int x, int y);
 };
 
