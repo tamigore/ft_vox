@@ -10,10 +10,14 @@ Chunk::Chunk(int x, int y) : posX(x), posY(y)
 
 Chunk::~Chunk()
 {
-	glDeleteVertexArrays(1, &VAO);
-	glDeleteBuffers(1, &VBO);
-	glDeleteBuffers(1, &EBO);
-	delete[] chunk;
+	if (isCreated)
+	{
+		glDeleteVertexArrays(1, &VAO);
+		glDeleteBuffers(1, &VBO);
+		glDeleteBuffers(1, &EBO);
+	}
+	if (chunk)
+		delete[] chunk;
 }
 
 void	Chunk::createFaces( int x, int y, int z, int position, int face, int block)
@@ -129,10 +133,10 @@ void	Chunk::draw(Shader &shader)
 
 void	Chunk::generateFaces(void)
 {
-	Chunk	*west = getWest();
-	Chunk	*east = getEast();
-	Chunk	*north = getNorth();
-	Chunk	*south = getSouth();
+	// Chunk	*west = getWest();
+	// Chunk	*east = getEast();
+	// Chunk	*north = getNorth();
+	// Chunk	*south = getSouth();
 
 	for (int x = 0; x < size_x; x++){
 		for (int y = 0; y < size_y; y++){

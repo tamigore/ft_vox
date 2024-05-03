@@ -84,6 +84,8 @@ GLenum	channelColor(int channel)
 	GLenum format;
 	if (channel == 1)
 		format = GL_RED;
+	else if (channel == 2)
+		format = GL_RG;
 	else if (channel == 3)
 		format = GL_RGB;
 	else if (channel == 4)

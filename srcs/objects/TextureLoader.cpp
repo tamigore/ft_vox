@@ -39,7 +39,7 @@ bool	TextureLoader::LoadTextureArray(std::vector<std::string> fileNames)
 
 	if (data)
 	{
-		unsigned int textureID;
+		uint32_t	textureID;
 		glGenTextures(1, &textureID);
 		glBindTexture(GL_TEXTURE_2D_ARRAY, textureID);
 		glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, format, width, height, fileNames.size(), 0, format, GL_UNSIGNED_BYTE, NULL);
