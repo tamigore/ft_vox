@@ -1,4 +1,4 @@
-#include "Noise.hpp"
+#include "objects/Noise.hpp"
 
 #include <numeric>
 #include <random>

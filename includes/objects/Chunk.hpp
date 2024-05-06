@@ -2,6 +2,7 @@
 # define Chunk_HPP
 
 # include <vector>
+# include <mutex>
 
 # include "objects/Vertex.hpp"
 # include "objects/Shader.hpp"
@@ -31,6 +32,8 @@ class Chunk
 	public:
 		Chunk(int x, int y);
 		~Chunk();
+
+		std::mutex mutex;
 
 		void	generateFaces(void);
 		void	setupMesh();

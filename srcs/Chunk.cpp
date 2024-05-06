@@ -1,5 +1,5 @@
 #include "stb_image.h"
-#include "Chunk.hpp"
+#include "objects/Chunk.hpp"
 #include "Profiler.hpp"
 using namespace obj;
 
@@ -75,10 +75,10 @@ void	Chunk::createFaces( int x, int y, int z, int position, int face, int block)
 	};
 
 	indices.push_back(vertices.size());	
-	indices.push_back(vertices.size() + 1);	
+	indices.push_back(vertices.size() + 1);
 	indices.push_back(vertices.size() + 2);
 	indices.push_back(vertices.size());	
-	indices.push_back(vertices.size() + 2);	
+	indices.push_back(vertices.size() + 2);
 	indices.push_back(vertices.size() + 3);
 	tmp.TextureCoordonates = texture[0];
 	tmp.Position = angle[0];
@@ -134,40 +134,44 @@ void	Chunk::draw(Shader &shader)
 void	Chunk::generateFaces(void)
 {
 	// Profiler::StartTracking("generateFaces");
-	// Chunk	*west = getWest();
-	// Chunk	*east = getEast();
-	// Chunk	*north = getNorth();
-	// Chunk	*south = getSouth();
+	Chunk	*west = getWest();
+	Chunk	*east = getEast();
+	Chunk	*north = getNorth();
+	Chunk	*south = getSouth();
 
 	for (int x = 0; x < size_x; x++){
 		for (int y = 0; y < size_y; y++){
 			for (int z = 0; z < size_z; z++){
-				if (!chunk[z + y * size_z + x * size_y * size_z])
+				int position = z + y * size_z + x * size_y * size_z;
+				int block = chunk[position];
+				if (!block)
 					continue;
-				int position;
 				position = (z - 1) + y * size_z + x * size_y * size_z;
 				if (z == 0 || !chunk[position])
-					createFaces(posX * size_x + x, posY * size_y + y, z, position, 0, chunk[z + y * size_z + x * size_y * size_z]);
+					createFaces(posX * size_x + x, posY * size_y + y, z, position, 0, block);
 				position = (z + 1) + y * size_z + x * size_y * size_z;
 				if (z == 255 || !chunk[position])
-					createFaces(posX * size_x + x, posY * size_y + y, z, position, 1, chunk[z + y * size_z + x * size_y * size_z]);
+					createFaces(posX * size_x + x, posY * size_y + y, z, position, 1, block);
 				position = z + (y - 1) * size_z + x * size_y * size_z;
-				if (y == 0 || !chunk[position])
-					createFaces(posX * size_x + x, posY * size_y + y, z, position, 2, chunk[z + y * size_z + x * size_y * size_z]);
+				if ((y == 0 && south == nullptr) || (y - 1 >= 0 && !chunk[position]) ||
+					(y == 0 && south && !south->chunk[z + 15 * size_z + x * size_y * size_z]))
+					createFaces(posX * size_x + x, posY * size_y + y, z, position, 2, block);
 				position = z + (y + 1) * size_z + x * size_y * size_z;
-				if (y == 15 || !chunk[position])
-					createFaces(posX * size_x + x, posY * size_y + y, z, position, 3, chunk[z + y * size_z + x * size_y * size_z]);
+				if ((y == 15 && north == nullptr) || (y + 1 <= 15 && !chunk[position]) ||
+					(y == 15 && north && !north->chunk[z + 0 + x * size_y * size_z]))
+					createFaces(posX * size_x + x, posY * size_y + y, z, position, 3, block);
 				position = z + y * size_z + (x - 1) * size_y * size_z;
-				if (x == 0 || !chunk[position])
-					createFaces(posX * size_x + x, posY * size_y + y, z, position, 4, chunk[z + y * size_z + x * size_y * size_z]);
+				if ((x == 0 && west == nullptr) || (x - 1 >= 0 && !chunk[position]) ||
+					(x == 0 && west && !west->chunk[z + y * size_z + 15 * size_y * size_z]))
+					createFaces(posX * size_x + x, posY * size_y + y, z, position, 4, block);
 				position = z + y * size_z + (x + 1) * size_y * size_z;
-				if (x == 15 || !chunk[position])
-					createFaces(posX * size_x + x, posY * size_y + y, z, position, 5, chunk[z + y * size_z + x * size_y * size_z]);
+				if ((x == 15 && east == nullptr) || (x + 1 <= 15 && !chunk[position]) ||
+					(x == 15 && east && !east->chunk[z + y * size_z + 0]))
+					createFaces(posX * size_x + x, posY * size_y + y, z, position, 5, block);
 			}
 		}
 	}
 	isCreated = true;
-	// Profiler::StopTracking("generateFaces");
 }
 
 Chunk	*Chunk::getWest() { return west; }

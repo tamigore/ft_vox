@@ -5,7 +5,7 @@
 #include <thread>
 #include <mutex>
 
-# include "Chunk.hpp"
+# include "objects/Chunk.hpp"
 
 // class Consumer
 // {

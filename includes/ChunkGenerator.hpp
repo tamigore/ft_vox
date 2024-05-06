@@ -4,7 +4,7 @@
 # include <vector>
 # include <map>
 
-# include "Chunk.hpp"
+# include "objects/Chunk.hpp"
 
 typedef enum
 {

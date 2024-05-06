@@ -6,8 +6,8 @@
 
 # include "objects/Camera.hpp"
 # include "objects/Skybox.hpp"
-# include "Noise.hpp"
-# include "Chunk.hpp"
+# include "objects/Noise.hpp"
+# include "objects/Chunk.hpp"
 
 class World
 {
