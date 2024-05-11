@@ -10,10 +10,15 @@ uniform sampler2DArray TextureArray;
 
 void main()
 {
-	if (blockid == 0)
-		FragColor = vec4(0.0, 0.0 , 0.0, 0.0);
-	else if (blockid == 1)
-		FragColor = texture(TextureArray, vec3(Texture, blockid)) * vec4(0.4, 0.8, 0.6, 0);
+	if (blockid == 1)
+	{
+		if (face == 1)
+			FragColor = texture(TextureArray, vec3(Texture, blockid));
+		else if (face == 0)
+			FragColor = texture(TextureArray, vec3(Texture, blockid + 2));
+		else
+			FragColor = texture(TextureArray, vec3(Texture, blockid + 1));
+	}
 	else
 		FragColor = texture(TextureArray, vec3(Texture, blockid));
 	if (face == 4 || face == 2)

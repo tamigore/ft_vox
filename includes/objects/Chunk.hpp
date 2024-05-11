@@ -30,18 +30,6 @@ class Chunk
 		void	createFaces( int x, int y, int z, int position, int face, int block);
 
 	public:
-		Chunk(int x, int y);
-		~Chunk();
-
-		std::mutex mutex;
-
-		void	generateFaces(void);
-		void	setupMesh();
-		void	draw(Shader &shader);
-
-		bool 	isVAO=false;
-		bool 	isCreated=false;
-
 		int		posX;
 		int		posY;
 
@@ -50,6 +38,17 @@ class Chunk
 		const int	size_z = 256;
 
 		unsigned char	*chunk;
+
+		Chunk(int x, int y);
+		~Chunk();
+
+		void	generateFaces(void);
+		void	setupMesh();
+		void	draw(Shader &shader);
+		void	updateNeighbors();
+
+		bool 	isVAO=false;
+		bool 	isCreated=false;
 
 		Chunk	*getWest();
 		Chunk	*getEast();
@@ -61,11 +60,9 @@ class Chunk
 		void	setNorth(Chunk *c);
 		void	setSouth(Chunk *c);
 
-		int getVAO() { return VAO; }
-		int getVBO() { return VBO; }
-		int getEBO() { return EBO; }
-
-		// Chunk	*getChunk(Chunk *chunk, int x, int y);
+		int		getVAO() { return VAO; }
+		int		getVBO() { return VBO; }
+		int		getEBO() { return EBO; }
 };
 
 }

@@ -1,28 +1,22 @@
 #ifndef __BLOCK_HPP__
 # define __BLOCK_HPP__
 
+enum BlockType
+{
+	air,
+	grass,
+	grassSide,
+	dirt,
+	stone,
+	bedrock,
+	water,
+};
+
 namespace obj
 {
 
 int BLOCK_RENDER_SIZE = 1;
 
-enum BlockType
-{
-	air,
-	dirt,
-	grass,
-	stone,
-	bedrock,
-	sand,
-	oak_wood_side,
-	leaves_2,
-	water,
-	snow,
-	iron_ore,
-	gold_ore ,
-	diamond_ore,
-	UNKNOWN
-};
 
 class Block
 {
@@ -41,6 +35,5 @@ class Block
 };
 
 }
-
 
 #endif

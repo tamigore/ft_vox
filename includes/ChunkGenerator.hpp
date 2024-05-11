@@ -22,6 +22,7 @@ public:
 	~ChunkGenerator();
 
 	obj::Chunk	*generateChunk(int posX, int posY);
+	int			terrainHightGenerator(float x, float y);
 
 private:
 	std::vector<obj::Noise>		noises;
@@ -31,9 +32,14 @@ private:
 	float			mountainLevel = 0.9;
 	float			continentNoise = 0.5;
 
-	int		continentaleGenerator(float x, float y);
 	int		bedrockGenerator(float x, float y);
-	void	calculateNoise(obj::Chunk *res, int x, float px, int posY);
+	int		continentaleGenerator(float x, float y);
+	int		erosionGenerator(float x, float y);
+	int		peaksGenerator(float x, float y);
+
+	float	bigCaveGenerator(float x, float y, float z);
+	float	caveGenerator(float x, float y, float z);
+	int		cave2DGenerator(float x, float y);
 };
 
 #endif

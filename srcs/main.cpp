@@ -49,7 +49,7 @@ std::mutex camMutex;
 int stableCamX = 0;
 int stableCamY = 0;
 
-const unsigned int renderDistance = 10;
+const unsigned int renderDistance = 2;
 ChunkGenerator generator = ChunkGenerator(42);
 
 // Thread
@@ -223,7 +223,10 @@ int main()
 {
 	GLFWwindow* window = glfw_init_window();
 	if (window == nullptr)
+	{
+		glfwTerminate();
 		return -1;
+	}
 	// Profiler::SetSaveOn();
 
 	// build and compile our shader dirtUpgradezprogram
@@ -235,25 +238,20 @@ int main()
 
 	bool res = textureLoader.LoadTextureArray(
 	{
-		std::filesystem::path("textures/dirt.jpg"),
-		std::filesystem::path("textures/grass.jpg"),
-		std::filesystem::path("textures/stone.jpg"),
-		std::filesystem::path("textures/bedrock.jpg"),
-		std::filesystem::path("textures/sand.jpg"),
-		std::filesystem::path("textures/oak_wood_side.jpg"),
-		std::filesystem::path("textures/leaves_2.jpg"),
-		std::filesystem::path("textures/water.jpg"),
-		std::filesystem::path("textures/snow.jpg"),
-		std::filesystem::path("textures/iron_ore.jpg"),
-		std::filesystem::path("textures/gold_ore.jpg"),
-		std::filesystem::path("textures/diamond_ore.jpg"),
-		std::filesystem::path("textures/UNKNOWN.jpg"),
+		std::filesystem::path("textures/minecraft/16/grass_carried.png"),
+		std::filesystem::path("textures/minecraft/16/grass_carried.png"),
+		std::filesystem::path("textures/minecraft/16/grass_side_carried.png"),
+		std::filesystem::path("textures/minecraft/16/dirt.png"),
+		std::filesystem::path("textures/minecraft/16/stone.png"),
+		std::filesystem::path("textures/minecraft/16/bedrock.png"),
+		std::filesystem::path("textures/minecraft/16/NewWater.png"),
 	});
 	if (res)
 		textureArray = textureLoader.GetTextureArray();
 	else
 	{
 		std::cout << "Failed to load texture array" << std::endl;
+		glfwTerminate();
 		return -1;
 	}
 
@@ -279,7 +277,7 @@ int main()
 		glBindTexture(GL_TEXTURE_2D_ARRAY, textureArray.id);
 		draw(window, ourShader, skybox, stable_state);
 	}
-	secondaryThread.detach();
+	secondaryThread.join();
 	glfwTerminate();
 	delete stable_state;
 	return 0;
@@ -345,7 +343,7 @@ GLFWwindow*	glfw_init_window(void)
 #endif
 
 	// glfw window creation
-	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Scop", NULL, NULL);
+	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "ft_vox", NULL, NULL);
 	if (window == NULL)
 	{
 		std::cout << "Failed to create GLFW window" << std::endl;

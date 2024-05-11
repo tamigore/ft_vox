@@ -10,12 +10,6 @@ Chunk::Chunk(int x, int y) : posX(x), posY(y)
 
 Chunk::~Chunk()
 {
-	// if (isCreated)
-	// {
-	// 	glDeleteVertexArrays(1, &VAO);
-	// 	glDeleteBuffers(1, &VBO);
-	// 	glDeleteBuffers(1, &EBO);
-	// }
 	if (chunk)
 		delete[] chunk;
 }
@@ -83,7 +77,7 @@ void	Chunk::createFaces( int x, int y, int z, int position, int face, int block)
 	tmp.TextureCoordonates = texture[0];
 	tmp.Position = angle[0];
     tmp.Face = face;
-    tmp.Block = block - 1;
+    tmp.Block = block;
 	vertices.push_back(tmp);
 	tmp.TextureCoordonates = texture[1];
 	tmp.Position = angle[1];
@@ -125,6 +119,10 @@ void	Chunk::setupMesh()
 
 void	Chunk::draw(Shader &shader)
 {
+	if (!isCreated)
+		return;
+	if (!isVAO)
+		return;
 	glBindVertexArray(VAO);
 	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);
@@ -134,10 +132,17 @@ void	Chunk::draw(Shader &shader)
 void	Chunk::generateFaces(void)
 {
 	// Profiler::StartTracking("generateFaces");
+	std::cout << "start generate faces" << std::endl;
 	Chunk	*west = getWest();
 	Chunk	*east = getEast();
 	Chunk	*north = getNorth();
 	Chunk	*south = getSouth();
+
+	if (west == nullptr || east == nullptr || north == nullptr || south == nullptr)
+	{
+		std::cout << "chunk not ready" << std::endl;
+		return;
+	}
 
 	for (int x = 0; x < size_x; x++){
 		for (int y = 0; y < size_y; y++){
@@ -153,25 +158,43 @@ void	Chunk::generateFaces(void)
 				if (z == 255 || !chunk[position])
 					createFaces(posX * size_x + x, posY * size_y + y, z, position, 1, block);
 				position = z + (y - 1) * size_z + x * size_y * size_z;
-				if ((y == 0 && south == nullptr) || (y - 1 >= 0 && !chunk[position]) ||
+				if ((y - 1 >= 0 && !chunk[position]) ||
 					(y == 0 && south && !south->chunk[z + 15 * size_z + x * size_y * size_z]))
 					createFaces(posX * size_x + x, posY * size_y + y, z, position, 2, block);
 				position = z + (y + 1) * size_z + x * size_y * size_z;
-				if ((y == 15 && north == nullptr) || (y + 1 <= 15 && !chunk[position]) ||
+				if ((y + 1 <= 15 && !chunk[position]) ||
 					(y == 15 && north && !north->chunk[z + 0 + x * size_y * size_z]))
 					createFaces(posX * size_x + x, posY * size_y + y, z, position, 3, block);
 				position = z + y * size_z + (x - 1) * size_y * size_z;
-				if ((x == 0 && west == nullptr) || (x - 1 >= 0 && !chunk[position]) ||
+				if ((x - 1 >= 0 && !chunk[position]) ||
 					(x == 0 && west && !west->chunk[z + y * size_z + 15 * size_y * size_z]))
 					createFaces(posX * size_x + x, posY * size_y + y, z, position, 4, block);
 				position = z + y * size_z + (x + 1) * size_y * size_z;
-				if ((x == 15 && east == nullptr) || (x + 1 <= 15 && !chunk[position]) ||
+				if ((x + 1 <= 15 && !chunk[position]) ||
 					(x == 15 && east && !east->chunk[z + y * size_z + 0]))
 					createFaces(posX * size_x + x, posY * size_y + y, z, position, 5, block);
 			}
 		}
 	}
 	isCreated = true;
+	std::cout << "end generate faces" << std::endl;
+}
+
+void	Chunk::updateNeighbors()
+{
+	Chunk	*west = getWest();
+	Chunk	*east = getEast();
+	Chunk	*north = getNorth();
+	Chunk	*south = getSouth();
+
+	if (west)
+		west->generateFaces();
+	if (east)
+		east->generateFaces();
+	if (north)
+		north->generateFaces();
+	if (south)
+		south->generateFaces();
 }
 
 Chunk	*Chunk::getWest() { return west; }
@@ -183,16 +206,3 @@ void	Chunk::setWest(Chunk *c) { west = c; }
 void	Chunk::setEast(Chunk *c) { east = c; }
 void	Chunk::setNorth(Chunk *c) { north = c; }
 void	Chunk::setSouth(Chunk *c) { south = c; }
-
-// Chunk	*Chunk::getChunk(Chunk *chunk, int x, int y)
-// {
-// 	while (x != posX && y != posY)
-// 	{
-// 		if (x < posX)
-// 		{
-// 			if (west)
-// 				;
-// 			return nullptr;
-// 		}
-// 	}
-// }

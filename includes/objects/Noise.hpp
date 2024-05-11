@@ -19,8 +19,6 @@ class Noise
 		float	Generate2D(math::vec2 pos, float scale, float amplitude, float persistence, int octaves);
 		float	Generate3D(math::vec3 pos, float scale, float amplitude, float persistence, int octaves);
 
-
-
 	private:
 		double	noise(double x, double y, double z);
 		
