@@ -3,10 +3,12 @@
 
 # include <vector>
 # include <mutex>
+# include <memory>
 
 # include "objects/Vertex.hpp"
 # include "objects/Shader.hpp"
 # include "objects/Texture.hpp"
+# include "objects/Block.hpp"
 # include "math/math.hpp"
 # include "Noise.hpp"
 # include "glad/glad.h"
@@ -37,7 +39,8 @@ class Chunk
 		const int	size_y = 16;
 		const int	size_z = 256;
 
-		unsigned char	*chunk;
+		std::unique_ptr<unsigned char []>	chunk;
+		std::mutex		mutex;
 
 		Chunk(int x, int y);
 		~Chunk();
@@ -45,7 +48,6 @@ class Chunk
 		void	generateFaces(void);
 		void	setupMesh();
 		void	draw(Shader &shader);
-		void	updateNeighbors();
 
 		bool 	isVAO=false;
 		bool 	isCreated=false;
@@ -63,6 +65,8 @@ class Chunk
 		int		getVAO() { return VAO; }
 		int		getVBO() { return VBO; }
 		int		getEBO() { return EBO; }
+
+		bool	isTransparent(int position, unsigned int block);
 };
 
 }

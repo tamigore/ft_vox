@@ -49,7 +49,7 @@ std::mutex camMutex;
 int stableCamX = 0;
 int stableCamY = 0;
 
-const unsigned int renderDistance = 2;
+const unsigned int renderDistance = 10;
 ChunkGenerator generator = ChunkGenerator(42);
 
 // Thread
@@ -67,9 +67,7 @@ void	generate(int x, int y, std::map<std::pair<int, int>, obj::Chunk *> *chunksM
 	std::map<std::pair<int, int>, obj::Chunk *>::iterator found = chunksMap->find(std::make_pair(x, y));
 	if (found == chunksMap->end())
 	{
-		// Profiler::StartTracking("generate()");
 		chunk = generator.generateChunk(x, y);
-		// Profiler::StopTracking("generate()");	
 		found = chunksMap->find(std::make_pair(x - 1, y));
 		if (found != chunksMap->end())
 		{
@@ -118,7 +116,7 @@ void	delete_chunk(std::map<std::pair<int, int>, obj::Chunk *>	*chunksMap, int ca
 	for (auto key : set)
 	{ 
 		obj::Chunk* chunk = chunksMap->at(key);
-		if (chunk->isCreated)
+		if (chunk->isVAO)
 		{
 			toDeleteVao_mutex.lock();
 			toDeleteVAO.push_back(chunksMap->at(key)->getVAO());
@@ -126,9 +124,37 @@ void	delete_chunk(std::map<std::pair<int, int>, obj::Chunk *>	*chunksMap, int ca
 			toDeleteVAO.push_back(chunksMap->at(key)->getEBO());
 			toDeleteVao_mutex.unlock();
 		}
+		if (chunk->getWest())
+			chunk->getWest()->setEast(nullptr);
+		if (chunk->getEast())
+			chunk->getEast()->setWest(nullptr);
+		if (chunk->getNorth())
+			chunk->getNorth()->setSouth(nullptr);
+		if (chunk->getSouth())
+			chunk->getSouth()->setNorth(nullptr);
 		delete chunk;
 		chunksMap->erase(key);
 	} 
+	chunk_mutex.unlock();
+}
+
+void	delete_all_chunk(std::map<std::pair<int, int>, obj::Chunk *>	*chunksMap)
+{
+	std::map<std::pair<int, int>, obj::Chunk *>::iterator	chunk;
+	chunk_mutex.lock();
+	for (chunk = chunksMap->begin(); chunk != chunksMap->end(); chunk++)
+	{
+		if (chunk->second->isVAO)
+		{
+			toDeleteVao_mutex.lock();
+			toDeleteVAO.push_back(chunk->second->getVAO());
+			toDeleteVAO.push_back(chunk->second->getVBO());
+			toDeleteVAO.push_back(chunk->second->getEBO());
+			toDeleteVao_mutex.unlock();
+		}
+		delete chunk->second;
+	}
+	chunksMap->clear();
 	chunk_mutex.unlock();
 }
 
@@ -189,8 +215,9 @@ void update_thread(std::vector<obj::Chunk *> **stable_state, GLFWwindow *window)
 		}
 		for (auto chunk : *tmp_state)
 		{
-			if (chunk->isCreated == false)
-				chunk->generateFaces();
+			chunk->mutex.lock();
+			chunk->generateFaces();
+			chunk->mutex.unlock();
 		}
 
 		stable_mutex.lock();
@@ -201,6 +228,9 @@ void update_thread(std::vector<obj::Chunk *> **stable_state, GLFWwindow *window)
 
 		delete_chunk(&chunksMap, camX, camY);
 	}
+	delete_all_chunk(&chunksMap);
+	if (tmp_state != nullptr)
+		delete tmp_state;
 }
 
 void	deleteBuffers()
@@ -231,20 +261,23 @@ int main()
 
 	// build and compile our shader dirtUpgradezprogram
 	obj::Shader ourShader("srcs/shaders/vertex_shader.vs", "srcs/shaders/fragment_shader.fs", nullptr);
-	// obj::Shader ourShader("srcs/shaders/vertex_shader.vert", "srcs/shaders/fragment_shader.frag", "srcs/shaders/geometry_shader.geom");
 
 	obj::TextureArray textureArray;
 	obj::TextureLoader textureLoader;
 
 	bool res = textureLoader.LoadTextureArray(
 	{
-		std::filesystem::path("textures/minecraft/16/grass_carried.png"),
-		std::filesystem::path("textures/minecraft/16/grass_carried.png"),
-		std::filesystem::path("textures/minecraft/16/grass_side_carried.png"),
-		std::filesystem::path("textures/minecraft/16/dirt.png"),
-		std::filesystem::path("textures/minecraft/16/stone.png"),
-		std::filesystem::path("textures/minecraft/16/bedrock.png"),
-		std::filesystem::path("textures/minecraft/16/NewWater.png"),
+		std::filesystem::path("textures/grass.png"),
+		std::filesystem::path("textures/grass.png"),
+		std::filesystem::path("textures/grass_side.png"),
+		std::filesystem::path("textures/snow.png"),
+		std::filesystem::path("textures/snow_side.png"),
+		std::filesystem::path("textures/NewWater.png"),
+		std::filesystem::path("textures/dirt.png"),
+		std::filesystem::path("textures/stone.png"),
+		std::filesystem::path("textures/bedrock.png"),
+		std::filesystem::path("textures/gravel.png"),
+		std::filesystem::path("textures/sand.png"),
 	});
 	if (res)
 		textureArray = textureLoader.GetTextureArray();
@@ -277,9 +310,30 @@ int main()
 		glBindTexture(GL_TEXTURE_2D_ARRAY, textureArray.id);
 		draw(window, ourShader, skybox, stable_state);
 	}
+
 	secondaryThread.join();
+
+	stable_mutex.lock();
+	if (stable_state != nullptr)
+		delete stable_state;
+	stable_mutex.unlock();
+
+	deleteBuffers();
+
+	glfwDestroyWindow(window);
+
+	glDeleteVertexArrays(1, &skybox.VAO);
+	glDeleteBuffers(1, &skybox.VBO);
+	glDeleteBuffers(1, &skybox.EBO);
+
+	glDeleteTextures(textureArray.depth, &textureArray.id);
+	glDeleteTextures(1, &skybox.textureID);
+
+	glDeleteProgram(skybox.getShaderID());
+	glDeleteProgram(ourShader.ID);
+
 	glfwTerminate();
-	delete stable_state;
+
 	return 0;
 }
 
@@ -308,15 +362,12 @@ void	draw(GLFWwindow* window, obj::Shader &ourShader, obj::Skybox &skybox, std::
 	stable_mutex.lock();
 	if (stable_state != nullptr)
 	{
-		// std::cout << "stable_state size: " << stable_state->size() << std::endl;
 		for (auto chunk: *stable_state)
 		{
 			if (chunk->isCreated == false)
 				continue;
 			if (chunk->isVAO == false)
-			{
 				chunk->setupMesh();
-			}
 			chunk->draw(ourShader);
 		}
 	}
@@ -366,6 +417,9 @@ GLFWwindow*	glfw_init_window(void)
 	// enable modes
 	glEnable(GL_DEPTH_TEST);
 
+	glEnable(GL_BLEND);
+	// glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glDisable(GL_CULL_FACE);
 	return window;
 }
 

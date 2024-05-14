@@ -37,9 +37,7 @@ private:
 	int		erosionGenerator(float x, float y);
 	int		peaksGenerator(float x, float y);
 
-	float	bigCaveGenerator(float x, float y, float z);
 	float	caveGenerator(float x, float y, float z);
-	int		cave2DGenerator(float x, float y);
 };
 
 #endif

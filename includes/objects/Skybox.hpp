@@ -23,10 +23,14 @@ class Skybox
 		void	load();
 		void	setup();
 
-	private:
-		obj::Shader		skyboxShader;
+		unsigned int	getShaderID() { return skyboxShader.ID; }
+		unsigned int	getTextureID() { return textureID; }
+
 		unsigned int	VAO, VBO, EBO;
 		unsigned int	textureID;
+
+	private:
+		obj::Shader		skyboxShader;
 
 };
 

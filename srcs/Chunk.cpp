@@ -1,17 +1,17 @@
 #include "stb_image.h"
 #include "objects/Chunk.hpp"
 #include "Profiler.hpp"
+
 using namespace obj;
 
 Chunk::Chunk(int x, int y) : posX(x), posY(y)
 {
-	chunk = new unsigned char[size_x * size_y * size_z];
+	int size = size_x * size_y * size_z;
+	chunk = std::make_unique<unsigned char []>(size);
 }
 
 Chunk::~Chunk()
 {
-	if (chunk)
-		delete[] chunk;
 }
 
 void	Chunk::createFaces( int x, int y, int z, int position, int face, int block)
@@ -131,18 +131,21 @@ void	Chunk::draw(Shader &shader)
 
 void	Chunk::generateFaces(void)
 {
-	// Profiler::StartTracking("generateFaces");
-	std::cout << "start generate faces" << std::endl;
+	if (isCreated)
+		return;
+
 	Chunk	*west = getWest();
 	Chunk	*east = getEast();
 	Chunk	*north = getNorth();
 	Chunk	*south = getSouth();
 
-	if (west == nullptr || east == nullptr || north == nullptr || south == nullptr)
-	{
-		std::cout << "chunk not ready" << std::endl;
+	if (!west || !east || !north || !south)
 		return;
-	}
+
+	west->mutex.lock();
+	east->mutex.lock();
+	north->mutex.lock();
+	south->mutex.lock();
 
 	for (int x = 0; x < size_x; x++){
 		for (int y = 0; y < size_y; y++){
@@ -152,49 +155,35 @@ void	Chunk::generateFaces(void)
 				if (!block)
 					continue;
 				position = (z - 1) + y * size_z + x * size_y * size_z;
-				if (z == 0 || !chunk[position])
+				if (z == 0 || isTransparent(position, block))
 					createFaces(posX * size_x + x, posY * size_y + y, z, position, 0, block);
 				position = (z + 1) + y * size_z + x * size_y * size_z;
-				if (z == 255 || !chunk[position])
+				if (z == 255 || isTransparent(position, block))
 					createFaces(posX * size_x + x, posY * size_y + y, z, position, 1, block);
 				position = z + (y - 1) * size_z + x * size_y * size_z;
-				if ((y - 1 >= 0 && !chunk[position]) ||
-					(y == 0 && south && !south->chunk[z + 15 * size_z + x * size_y * size_z]))
+				if ((y - 1 >= 0 && isTransparent(position, block)) ||
+					(y == 0 && south->isTransparent(z + 15 * size_z + x * size_y * size_z, block)))
 					createFaces(posX * size_x + x, posY * size_y + y, z, position, 2, block);
 				position = z + (y + 1) * size_z + x * size_y * size_z;
-				if ((y + 1 <= 15 && !chunk[position]) ||
-					(y == 15 && north && !north->chunk[z + 0 + x * size_y * size_z]))
+				if ((y + 1 <= 15 && isTransparent(position, block)) ||
+					(y == 15 && north->isTransparent(z + x * size_y * size_z, block)))
 					createFaces(posX * size_x + x, posY * size_y + y, z, position, 3, block);
 				position = z + y * size_z + (x - 1) * size_y * size_z;
-				if ((x - 1 >= 0 && !chunk[position]) ||
-					(x == 0 && west && !west->chunk[z + y * size_z + 15 * size_y * size_z]))
+				if ((x - 1 >= 0 && isTransparent(position, block)) ||
+					(x == 0 && west->isTransparent(z + y * size_z + 15 * size_y * size_z, block)))
 					createFaces(posX * size_x + x, posY * size_y + y, z, position, 4, block);
 				position = z + y * size_z + (x + 1) * size_y * size_z;
-				if ((x + 1 <= 15 && !chunk[position]) ||
-					(x == 15 && east && !east->chunk[z + y * size_z + 0]))
+				if ((x + 1 <= 15 && isTransparent(position, block)) ||
+					(x == 15 && east->isTransparent(z + y * size_z, block)))	
 					createFaces(posX * size_x + x, posY * size_y + y, z, position, 5, block);
 			}
 		}
 	}
 	isCreated = true;
-	std::cout << "end generate faces" << std::endl;
-}
-
-void	Chunk::updateNeighbors()
-{
-	Chunk	*west = getWest();
-	Chunk	*east = getEast();
-	Chunk	*north = getNorth();
-	Chunk	*south = getSouth();
-
-	if (west)
-		west->generateFaces();
-	if (east)
-		east->generateFaces();
-	if (north)
-		north->generateFaces();
-	if (south)
-		south->generateFaces();
+	west->mutex.unlock();
+	east->mutex.unlock();
+	north->mutex.unlock();
+	south->mutex.unlock();
 }
 
 Chunk	*Chunk::getWest() { return west; }
@@ -206,3 +195,8 @@ void	Chunk::setWest(Chunk *c) { west = c; }
 void	Chunk::setEast(Chunk *c) { east = c; }
 void	Chunk::setNorth(Chunk *c) { north = c; }
 void	Chunk::setSouth(Chunk *c) { south = c; }
+
+bool	Chunk::isTransparent(int position, unsigned int block)
+{
+	return (chunk[position] == BlockType::air || (chunk[position] == BlockType::water && block != BlockType::water));
+}

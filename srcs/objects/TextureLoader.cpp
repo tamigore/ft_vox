@@ -6,28 +6,29 @@ bool TextureLoader::isReady = false;
 
 bool	TextureLoader::LoadTexture(std::string fileName)
 {
-    if (!isReady) Init();
+	if (!isReady) Init();
 
-    int width, height, nrChannels;
-    unsigned char* data = stbi_load(fileName.c_str(), &width, &height, &nrChannels, 0);
+	int width, height, nrChannels;
+	unsigned char* data = stbi_load(fileName.c_str(), &width, &height, &nrChannels, 0);
 	GLenum format = channelColor(nrChannels);
 
-    if (data)
+	if (data)
 	{
-        unsigned int textureID;
-        glGenTextures(1, &textureID);
-        glBindTexture(GL_TEXTURE_2D, textureID);
-        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
+		unsigned int textureID;
+		glGenTextures(1, &textureID);
+		glBindTexture(GL_TEXTURE_2D, textureID);
+		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+		glGenerateMipmap(GL_TEXTURE_2D);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		
-        stbi_image_free(data);
-        texture = {textureID, "diffuse", width, height, nrChannels};
+		stbi_image_free(data);
+		texture = {textureID, "diffuse", width, height, nrChannels};
 		return true;
-    }
+	}
 	else
-        std::cout << "Failed to load texture : " << fileName << std::endl;
+		std::cout << "Failed to load texture : " << fileName << std::endl;
+	stbi_image_free(data);
 	return false;
 }
 
@@ -40,8 +41,10 @@ bool	TextureLoader::LoadTextureArray(std::vector<std::string> fileNames)
 	if (!data)
 	{
 		std::cout << "Failed to load texture : " << fileNames[0] << std::endl;
+		stbi_image_free(data);
 		return false;
 	}
+	stbi_image_free(data);
 
 	GLenum format = channelColor(nrChannels);
 	uint32_t	textureID;
@@ -53,13 +56,17 @@ bool	TextureLoader::LoadTextureArray(std::vector<std::string> fileNames)
 	for (unsigned int i = 1; i < fileNames.size(); i++)
 	{
 		data = stbi_load(fileNames[i].c_str(), &width, &height, &nrChannels, 0);
-		if (!data)
+		if (data)
+		{
+			glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, i, width, height, 1, format, GL_UNSIGNED_BYTE, data);
+			stbi_image_free(data);
+		}
+		else
 		{
 			std::cout << "Failed to load texture : " << fileNames[i] << std::endl;
+			stbi_image_free(data);
 			return false;
 		}
-		glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, i, width, height, 1, format, GL_UNSIGNED_BYTE, data);
-		stbi_image_free(data);
 	}
 	glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
 	textureArray = {textureID, "diffuse", width, height, nrChannels, fileNames.size()};

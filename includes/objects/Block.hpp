@@ -6,17 +6,18 @@ enum BlockType
 	air,
 	grass,
 	grassSide,
+	snow,
+	snowSide,
+	water,
 	dirt,
 	stone,
 	bedrock,
-	water,
+	gravel,
+	sand,
 };
 
 namespace obj
 {
-
-int BLOCK_RENDER_SIZE = 1;
-
 
 class Block
 {
