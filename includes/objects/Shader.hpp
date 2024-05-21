@@ -2,7 +2,6 @@
 # define __SHADER_HPP__
 
 
-# include <glm/glm.hpp>
 # include <string>
 # include <fstream>
 # include <sstream>

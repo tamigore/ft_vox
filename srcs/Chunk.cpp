@@ -14,7 +14,7 @@ Chunk::~Chunk()
 {
 }
 
-void	Chunk::createFaces( int x, int y, int z, int position, int face, int block)
+void	Chunk::createFaces(int x, int y, int z, int position, int face, int block)
 {
 	math::vec3 angle[4];
 	(void)position;

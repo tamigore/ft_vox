@@ -29,8 +29,6 @@ class Chunk
 		std::vector<Vertex>			vertices;
 		std::vector<unsigned int>	indices;
 
-		void	createFaces( int x, int y, int z, int position, int face, int block);
-
 	public:
 		int		posX;
 		int		posY;
@@ -48,6 +46,7 @@ class Chunk
 		void	generateFaces(void);
 		void	setupMesh();
 		void	draw(Shader &shader);
+		void	createFaces( int x, int y, int z, int position, int face, int block);
 
 		bool 	isVAO=false;
 		bool 	isCreated=false;
