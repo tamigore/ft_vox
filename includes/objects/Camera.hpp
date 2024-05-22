@@ -6,6 +6,7 @@
 #include "../math/math.hpp"
 #include "../../includes/glad/glad.h"
 #include <mutex>
+
 namespace obj
 {
 
@@ -38,6 +39,7 @@ public:
     float MovementSpeed;
     float MouseSensitivity;
     float Zoom;
+
     std::mutex mutex;
 
     Camera();

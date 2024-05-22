@@ -10,11 +10,6 @@ Chunk::Chunk(int x, int y) : posX(x), posY(y)
 	chunk = std::make_unique<unsigned char []>(size);
 }
 
-// Chunk::Chunk(Chunk &chunk)
-// {
-// 	*this = chunk;
-// }
-
 Chunk::~Chunk() {}
 
 void	Chunk::createFaces(int x, int y, int z, int position, int face, int block)
@@ -95,33 +90,35 @@ void	Chunk::createFaces(int x, int y, int z, int position, int face, int block)
 
 void	Chunk::setupMesh()
 {
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glGenBuffers(1, &EBO);
+	std::lock_guard<std::mutex> lock (mutex);
+	glGenVertexArrays(1, &VAO);
+	glGenBuffers(1, &VBO);
+	glGenBuffers(1, &EBO);
 
-    glBindVertexArray(VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_STATIC_DRAW);  
+	glBindVertexArray(VAO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_STATIC_DRAW);  
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
 
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Position));
-    glEnableVertexAttribArray(1);	
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Normal));
-    glEnableVertexAttribArray(2);	
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, TextureCoordonates));
-    glEnableVertexAttribArray(3);	
-    glVertexAttribIPointer(3, 1, GL_INT, sizeof(Vertex), (void*)offsetof(Vertex, Face));
-    glEnableVertexAttribArray(4);
-    glVertexAttribIPointer(4, 1, GL_INT, sizeof(Vertex), (void*)offsetof(Vertex, Block));
-    glBindVertexArray(0);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Position));
+	glEnableVertexAttribArray(1);	
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Normal));
+	glEnableVertexAttribArray(2);	
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, TextureCoordonates));
+	glEnableVertexAttribArray(3);	
+	glVertexAttribIPointer(3, 1, GL_INT, sizeof(Vertex), (void*)offsetof(Vertex, Face));
+	glEnableVertexAttribArray(4);
+	glVertexAttribIPointer(4, 1, GL_INT, sizeof(Vertex), (void*)offsetof(Vertex, Block));
+	glBindVertexArray(0);
 	isVAO = true;
 }
 
 void	Chunk::draw()
 {
+	std::lock_guard<std::mutex> lock (mutex);
 	if (!isCreated)
 		return;
 	if (!isVAO)
@@ -134,6 +131,7 @@ void	Chunk::draw()
 
 void	Chunk::generateFaces(void)
 {
+	std::lock_guard<std::mutex> lock (mutex);
 	if (isCreated)
 		return;
 
@@ -142,14 +140,13 @@ void	Chunk::generateFaces(void)
 	Chunk	*north = getNorth();
 	Chunk	*south = getSouth();
 
-
 	if (!west || !east || !north || !south)
 		return;
 
-	west->mutex.lock();
-	east->mutex.lock();
-	north->mutex.lock();
-	south->mutex.lock();
+    std::lock_guard<std::mutex> wlock (west->mutex);
+    std::lock_guard<std::mutex> elock (east->mutex);
+    std::lock_guard<std::mutex> nlock (north->mutex);
+    std::lock_guard<std::mutex> slock (south->mutex);
 
 	for (int x = 0; x < size_x; x++){
 		for (int y = 0; y < size_y; y++){
@@ -184,10 +181,6 @@ void	Chunk::generateFaces(void)
 		}
 	}
 	isCreated = true;
-	west->mutex.unlock();
-	east->mutex.unlock();
-	north->mutex.unlock();
-	south->mutex.unlock();
 }
 
 Chunk	*Chunk::getWest() { return west; }
@@ -204,23 +197,3 @@ bool	Chunk::isTransparent(int position, unsigned int block)
 {
 	return (chunk[position] == BlockType::air || (chunk[position] == BlockType::water && block != BlockType::water));
 }
-
-// void Chunk::operator=(Chunk chunk)
-// {
-// 	this->east = chunk.getEast();
-// 	this->west = chunk.getWest();
-// 	this->north = chunk.getNorth();
-// 	this->south = chunk.getSouth();
-
-// 	for (int i = 0; i < size_x * size_y * size_z; i++)
-// 		this->chunk[i] = chunk.chunk[i];
-	
-// 	this->posX = chunk.posX;
-// 	this->posY = chunk.posY;
-// 	this->VAO = chunk.VAO;
-// 	this->VBO = chunk.VBO;
-// 	this->EBO = chunk.EBO;
-
-// 	this->vertices = chunk.vertices;
-// 	this->indices = chunk.indices;
-// }

@@ -69,26 +69,31 @@ void	generate(int x, int y, std::map<std::pair<int, int>, obj::Chunk *> *chunksM
 	{
 		chunk = generator.generateChunk(x, y);
 		found = chunksMap->find(std::make_pair(x - 1, y));
+		std::lock_guard<std::mutex> lock (chunk->mutex);
 		if (found != chunksMap->end())
 		{
+			std::lock_guard<std::mutex> next_lock(found->second->mutex);
 			chunk->setWest(found->second);
 			found->second->setEast(chunk);
 		}
 		found = chunksMap->find(std::make_pair(x + 1, y));
 		if (found != chunksMap->end())
 		{
+			std::lock_guard<std::mutex> next_lock(found->second->mutex);
 			chunk->setEast(found->second);
 			found->second->setWest(chunk);
 		}
 		found = chunksMap->find(std::make_pair(x, y - 1));
 		if (found != chunksMap->end())
 		{
+			std::lock_guard<std::mutex> next_lock(found->second->mutex);
 			chunk->setSouth(found->second);
 			found->second->setNorth(chunk);
 		}
 		found = chunksMap->find(std::make_pair(x, y + 1));
 		if (found != chunksMap->end())
 		{
+			std::lock_guard<std::mutex> next_lock(found->second->mutex);
 			chunk->setNorth(found->second);
 			found->second->setSouth(chunk);
 		}
@@ -115,7 +120,7 @@ void	delete_chunk(std::map<std::pair<int, int>, obj::Chunk *>	*chunksMap, int ca
 	for (auto key : set)
 	{ 
 		obj::Chunk* chunk = chunksMap->at(key);
-		chunk->mutex.lock();
+		std::lock_guard<std::mutex> lock (chunk->mutex);
 		if (chunk->isVAO)
 		{
 			toDeleteVao_mutex.lock();
@@ -124,15 +129,30 @@ void	delete_chunk(std::map<std::pair<int, int>, obj::Chunk *>	*chunksMap, int ca
 			toDeleteVAO.push_back(chunk->getEBO());
 			toDeleteVao_mutex.unlock();
 		}
-		if (chunk->getWest())
+		obj::Chunk *west = chunk->getWest();
+		if (west)
+		{
+			std::lock_guard<std::mutex> next_lock(west->mutex);
 			chunk->getWest()->setEast(nullptr);
-		if (chunk->getEast())
+		}	
+		obj::Chunk *east = chunk->getEast();
+		if (east)
+		{
+			std::lock_guard<std::mutex> next_lock(east->mutex);
 			chunk->getEast()->setWest(nullptr);
-		if (chunk->getNorth())
+		}
+		obj::Chunk *north = chunk->getNorth();
+		if (north)
+		{
+			std::lock_guard<std::mutex> next_lock(north->mutex);
 			chunk->getNorth()->setSouth(nullptr);
-		if (chunk->getSouth())
+		}
+		obj::Chunk *south = chunk->getSouth();
+		if (south)
+		{
+			std::lock_guard<std::mutex> next_lock(south->mutex);
 			chunk->getSouth()->setNorth(nullptr);
-		chunk->mutex.unlock();
+		}
 		delete chunk;
 		chunk = nullptr;
 		chunksMap->erase(key);
@@ -146,6 +166,7 @@ void	delete_all_chunk(std::map<std::pair<int, int>, obj::Chunk *>	*chunksMap)
 	chunk_mutex.lock();
 	for (chunk = chunksMap->begin(); chunk != chunksMap->end(); chunk++)
 	{
+		std::lock_guard<std::mutex> lock (chunk->second->mutex);
 		if (chunk->second->isVAO)
 		{
 			toDeleteVao_mutex.lock();
@@ -216,11 +237,7 @@ void update_thread(std::vector<obj::Chunk *> **stable_state, GLFWwindow *window)
 			buffer.clear();
 		}
 		for (auto chunk : *tmp_state)
-		{
-			chunk->mutex.lock();
 			chunk->generateFaces();
-			chunk->mutex.unlock();
-		}
 		stable_mutex.lock();
 		delete *stable_state;
 		*stable_state = tmp_state;
@@ -236,12 +253,9 @@ void update_thread(std::vector<obj::Chunk *> **stable_state, GLFWwindow *window)
 
 void	deleteBuffers()
 {
-	toDeleteVao_mutex.lock();
+	std::lock_guard<std::mutex>	lock(toDeleteVao_mutex);
 	if (toDeleteVAO.size() == 0)
-	{
-		toDeleteVao_mutex.unlock();
 		return;
-	}
 	for (int i = 0; i < toDeleteVAO.size(); i += 3)
 	{
 		unsigned int vao = toDeleteVAO[i];
@@ -252,7 +266,6 @@ void	deleteBuffers()
 		glDeleteBuffers(1, &ebo);
 	}
 	toDeleteVAO.clear();
-	toDeleteVao_mutex.unlock();
 }
 
 int main()
@@ -371,25 +384,16 @@ void	draw(GLFWwindow* window, obj::Shader &ourShader, obj::Skybox &skybox, std::
 		for (std::vector<obj::Chunk *>::iterator chunk = stable_state->begin(); chunk != stable_state->end(); chunk++)
 		{
 			std::cout << "1" << std::endl;
-			if (!(*chunk) || !(*chunk)->mutex.try_lock())
+			if (!(*chunk))
 				continue;
-			(*chunk)->mutex.unlock();
 			std::cout << "2" << std::endl;
-			obj::Chunk *tmp = *chunk;
+			if ((*chunk)->isCreated == false)
+				continue;
+			if ((*chunk)->isVAO == false)
+				(*chunk)->setupMesh();
 			std::cout << "3" << std::endl;
-			if (!tmp)
-				continue;
+			(*chunk)->draw();
 			std::cout << "4" << std::endl;
-			tmp->mutex.lock();
-			if (tmp->isCreated == false)
-			{
-				tmp->mutex.unlock();
-				continue;
-			}
-			if (tmp->isVAO == false)
-				tmp->setupMesh();
-			tmp->draw();
-			tmp->mutex.unlock();
 		}
 	}
 	stable_mutex.unlock();
@@ -438,9 +442,6 @@ GLFWwindow*	glfw_init_window(void)
 	// enable modes
 	glEnable(GL_DEPTH_TEST);
 
-	// glEnable(GL_BLEND);
-	// glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	// glDisable(GL_CULL_FACE);
 	return window;
 }
 

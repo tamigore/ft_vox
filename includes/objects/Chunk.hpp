@@ -39,13 +39,10 @@ class Chunk
 
 		std::unique_ptr<unsigned char []>	chunk;
 
-		mutable std::mutex		mutex;
+		std::mutex	mutex;
 
 		Chunk(int x, int y);
 		~Chunk();
-
-		// Chunk(Chunk &chunk);
-		// Chunk	operator=(Chunk chunk);
 
 		void	generateFaces(void);
 		void	setupMesh();
