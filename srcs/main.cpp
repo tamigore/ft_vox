@@ -181,7 +181,7 @@ void	delete_all_chunk(std::map<std::pair<int, int>, obj::Chunk *>	*chunksMap)
 	chunk_mutex.unlock();
 }
 
-void update_thread(std::vector<obj::Chunk *> **stable_state, GLFWwindow *window)
+void	update_thread(std::vector<obj::Chunk *> **stable_state, GLFWwindow *window)
 {
 	std::map<std::pair<int, int>, obj::Chunk *>	chunksMap;
 	std::vector<obj::Chunk *>					*tmp_state = new std::vector<obj::Chunk *>;
