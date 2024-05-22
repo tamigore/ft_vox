@@ -38,14 +38,18 @@ class Chunk
 		const int	size_z = 256;
 
 		std::unique_ptr<unsigned char []>	chunk;
-		std::mutex		mutex;
+
+		mutable std::mutex		mutex;
 
 		Chunk(int x, int y);
 		~Chunk();
 
+		// Chunk(Chunk &chunk);
+		// Chunk	operator=(Chunk chunk);
+
 		void	generateFaces(void);
 		void	setupMesh();
-		void	draw(Shader &shader);
+		void	draw();
 		void	createFaces( int x, int y, int z, int position, int face, int block);
 
 		bool 	isVAO=false;

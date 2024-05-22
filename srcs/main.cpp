@@ -115,12 +115,13 @@ void	delete_chunk(std::map<std::pair<int, int>, obj::Chunk *>	*chunksMap, int ca
 	for (auto key : set)
 	{ 
 		obj::Chunk* chunk = chunksMap->at(key);
+		chunk->mutex.lock();
 		if (chunk->isVAO)
 		{
 			toDeleteVao_mutex.lock();
-			toDeleteVAO.push_back(chunksMap->at(key)->getVAO());
-			toDeleteVAO.push_back(chunksMap->at(key)->getVBO());
-			toDeleteVAO.push_back(chunksMap->at(key)->getEBO());
+			toDeleteVAO.push_back(chunk->getVAO());
+			toDeleteVAO.push_back(chunk->getVBO());
+			toDeleteVAO.push_back(chunk->getEBO());
 			toDeleteVao_mutex.unlock();
 		}
 		if (chunk->getWest())
@@ -131,7 +132,9 @@ void	delete_chunk(std::map<std::pair<int, int>, obj::Chunk *>	*chunksMap, int ca
 			chunk->getNorth()->setSouth(nullptr);
 		if (chunk->getSouth())
 			chunk->getSouth()->setNorth(nullptr);
+		chunk->mutex.unlock();
 		delete chunk;
+		chunk = nullptr;
 		chunksMap->erase(key);
 	} 
 	chunk_mutex.unlock();
@@ -234,6 +237,11 @@ void update_thread(std::vector<obj::Chunk *> **stable_state, GLFWwindow *window)
 void	deleteBuffers()
 {
 	toDeleteVao_mutex.lock();
+	if (toDeleteVAO.size() == 0)
+	{
+		toDeleteVao_mutex.unlock();
+		return;
+	}
 	for (int i = 0; i < toDeleteVAO.size(); i += 3)
 	{
 		unsigned int vao = toDeleteVAO[i];
@@ -304,9 +312,9 @@ int main()
 		stableCamX = camera.Position.x;
 		stableCamY = camera.Position.z;
 		camMutex.unlock();
-		deleteBuffers();
 		glBindTexture(GL_TEXTURE_2D_ARRAY, textureArray.id);
 		draw(window, ourShader, skybox, stable_state);
+		deleteBuffers();
 	}
 
 	secondaryThread.join();
@@ -360,13 +368,28 @@ void	draw(GLFWwindow* window, obj::Shader &ourShader, obj::Skybox &skybox, std::
 	stable_mutex.lock();
 	if (stable_state != nullptr)
 	{
-		for (auto chunk: *stable_state)
+		for (std::vector<obj::Chunk *>::iterator chunk = stable_state->begin(); chunk != stable_state->end(); chunk++)
 		{
-			if (chunk->isCreated == false)
+			std::cout << "1" << std::endl;
+			if (!(*chunk) || !(*chunk)->mutex.try_lock())
 				continue;
-			if (chunk->isVAO == false)
-				chunk->setupMesh();
-			chunk->draw(ourShader);
+			(*chunk)->mutex.unlock();
+			std::cout << "2" << std::endl;
+			obj::Chunk *tmp = *chunk;
+			std::cout << "3" << std::endl;
+			if (!tmp)
+				continue;
+			std::cout << "4" << std::endl;
+			tmp->mutex.lock();
+			if (tmp->isCreated == false)
+			{
+				tmp->mutex.unlock();
+				continue;
+			}
+			if (tmp->isVAO == false)
+				tmp->setupMesh();
+			tmp->draw();
+			tmp->mutex.unlock();
 		}
 	}
 	stable_mutex.unlock();

@@ -10,9 +10,12 @@ Chunk::Chunk(int x, int y) : posX(x), posY(y)
 	chunk = std::make_unique<unsigned char []>(size);
 }
 
-Chunk::~Chunk()
-{
-}
+// Chunk::Chunk(Chunk &chunk)
+// {
+// 	*this = chunk;
+// }
+
+Chunk::~Chunk() {}
 
 void	Chunk::createFaces(int x, int y, int z, int position, int face, int block)
 {
@@ -117,7 +120,7 @@ void	Chunk::setupMesh()
 	isVAO = true;
 }
 
-void	Chunk::draw(Shader &shader)
+void	Chunk::draw()
 {
 	if (!isCreated)
 		return;
@@ -138,6 +141,7 @@ void	Chunk::generateFaces(void)
 	Chunk	*east = getEast();
 	Chunk	*north = getNorth();
 	Chunk	*south = getSouth();
+
 
 	if (!west || !east || !north || !south)
 		return;
@@ -200,3 +204,23 @@ bool	Chunk::isTransparent(int position, unsigned int block)
 {
 	return (chunk[position] == BlockType::air || (chunk[position] == BlockType::water && block != BlockType::water));
 }
+
+// void Chunk::operator=(Chunk chunk)
+// {
+// 	this->east = chunk.getEast();
+// 	this->west = chunk.getWest();
+// 	this->north = chunk.getNorth();
+// 	this->south = chunk.getSouth();
+
+// 	for (int i = 0; i < size_x * size_y * size_z; i++)
+// 		this->chunk[i] = chunk.chunk[i];
+	
+// 	this->posX = chunk.posX;
+// 	this->posY = chunk.posY;
+// 	this->VAO = chunk.VAO;
+// 	this->VBO = chunk.VBO;
+// 	this->EBO = chunk.EBO;
+
+// 	this->vertices = chunk.vertices;
+// 	this->indices = chunk.indices;
+// }
