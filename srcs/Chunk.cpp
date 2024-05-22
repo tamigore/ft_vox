@@ -90,7 +90,6 @@ void	Chunk::createFaces(int x, int y, int z, int position, int face, int block)
 
 void	Chunk::setupMesh()
 {
-	std::lock_guard<std::mutex> lock (mutex);
 	glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO);
 	glGenBuffers(1, &EBO);
@@ -118,7 +117,6 @@ void	Chunk::setupMesh()
 
 void	Chunk::draw()
 {
-	std::lock_guard<std::mutex> lock (mutex);
 	if (!isCreated)
 		return;
 	if (!isVAO)

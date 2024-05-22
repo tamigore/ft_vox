@@ -22,16 +22,16 @@
 #include <future>
 #include <thread>
 
-GLFWwindow*	glfw_init_window(void);
-void		draw(GLFWwindow* window, obj::Shader &ourShader, obj::Skybox &skybox, std::vector<obj::Chunk *>	*stable_state);
+GLFWwindow *glfw_init_window(void);
+void draw(GLFWwindow *window, obj::Shader &ourShader, obj::Skybox &skybox, std::vector<obj::Chunk *> *stable_state);
 
-void		framebuffer_size_callback(GLFWwindow* window, int width, int height);
-void		mouse_callback(GLFWwindow* window, double xpos, double ypos);
-void		scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-void		processInput(GLFWwindow *window);
+void framebuffer_size_callback(GLFWwindow *window, int width, int height);
+void mouse_callback(GLFWwindow *window, double xpos, double ypos);
+void scroll_callback(GLFWwindow *window, double xoffset, double yoffset);
+void processInput(GLFWwindow *window);
 
 // settings
-bool	skybox_active = true;
+bool skybox_active = true;
 const unsigned int SCR_WIDTH = 1920;
 const unsigned int SCR_HEIGHT = 1080;
 
@@ -42,7 +42,7 @@ float lastY = SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
 
 // timing
-float deltaTime = 0.0f;	// time between current frame and last frame
+float deltaTime = 0.0f; // time between current frame and last frame
 float lastFrame = 0.0f;
 
 std::mutex camMutex;
@@ -53,13 +53,13 @@ unsigned int renderDistance = 8;
 ChunkGenerator generator = ChunkGenerator(42);
 
 // Thread
-std::mutex	chunk_mutex;
-std::mutex	stable_mutex;
+std::mutex chunk_mutex;
+std::mutex stable_mutex;
 
-std::mutex	toDeleteVao_mutex;
-std::vector<unsigned int> toDeleteVAO;
+std::mutex toDelete_mutex;
+std::vector<obj::Chunk *> toDelete;
 
-void	generate(int x, int y, std::map<std::pair<int, int>, obj::Chunk *> *chunksMap)
+void generate(int x, int y, std::map<std::pair<int, int>, obj::Chunk *> *chunksMap)
 {
 	obj::Chunk *chunk = nullptr;
 
@@ -69,7 +69,7 @@ void	generate(int x, int y, std::map<std::pair<int, int>, obj::Chunk *> *chunksM
 	{
 		chunk = generator.generateChunk(x, y);
 		found = chunksMap->find(std::make_pair(x - 1, y));
-		std::lock_guard<std::mutex> lock (chunk->mutex);
+		std::lock_guard<std::mutex> lock(chunk->mutex);
 		if (found != chunksMap->end())
 		{
 			std::lock_guard<std::mutex> next_lock(found->second->mutex);
@@ -102,96 +102,110 @@ void	generate(int x, int y, std::map<std::pair<int, int>, obj::Chunk *> *chunksM
 	chunk_mutex.unlock();
 }
 
-void	delete_chunk(std::map<std::pair<int, int>, obj::Chunk *>	*chunksMap, int camX, int camY)
+void erase_chunk_from_map(std::map<std::pair<int, int>, obj::Chunk *> *chunksMap, int camX, int camY)
 {
-	std::map<std::pair<int, int>, obj::Chunk *>::iterator	chunk;
-	std::vector<std::pair<int, int>>						set;
-	chunk_mutex.lock();
+	std::map<std::pair<int, int>, obj::Chunk *>::iterator chunk;
+	std::lock_guard<std::mutex> lock(chunk_mutex);
 	for (chunk = chunksMap->begin(); chunk != chunksMap->end(); chunk++)
 	{
 		if ((chunk->first.first < (camX - (int)renderDistance)) ||
-			(chunk->first.first > (camX + (int)renderDistance) )||
+			(chunk->first.first > (camX + (int)renderDistance)) ||
 			(chunk->first.second < (camY - (int)renderDistance)) ||
 			(chunk->first.second > (camY + (int)renderDistance)))
 		{
-			set.push_back(chunk->first);
+			std::lock_guard<std::mutex> del_lock(toDelete_mutex);
+			toDelete.push_back(chunk->second);
+			chunksMap->erase(chunk);
 		}
 	}
-	for (auto key : set)
-	{ 
-		obj::Chunk* chunk = chunksMap->at(key);
-		std::lock_guard<std::mutex> lock (chunk->mutex);
-		if (chunk->isVAO)
+}
+
+void delete_chunk_from_toDelete(std::vector<obj::Chunk *> *stable_state)
+{
+	std::lock_guard<std::mutex> del_lock(toDelete_mutex);
+	if (!toDelete.size())
+		return;
+	std::cout << "Delete Chunk" << std::endl;
+	for (std::vector<obj::Chunk *>::iterator chunk = toDelete.begin(); chunk != toDelete.end(); chunk++)
+	{
+		if ((*chunk) == nullptr)
 		{
-			toDeleteVao_mutex.lock();
-			toDeleteVAO.push_back(chunk->getVAO());
-			toDeleteVAO.push_back(chunk->getVBO());
-			toDeleteVAO.push_back(chunk->getEBO());
-			toDeleteVao_mutex.unlock();
+			std::cout << "Chunk NULL" << std::endl;
+			return;
 		}
-		obj::Chunk *west = chunk->getWest();
+		std::lock_guard<std::mutex> lock((*chunk)->mutex);
+		std::cout << "( " << (*chunk)->posX << " | " << (*chunk)->posY << " )" << std::endl;
+		if (stable_state != nullptr)
+		{
+			std::lock_guard<std::mutex> stable_lock(stable_mutex);
+			if (std::find(stable_state->begin(), stable_state->end(), (*chunk)) != stable_state->end())
+			{
+				std::cout << "Chunk still in stable state" << std::endl;
+				return;
+			}
+		}
+		if ((*chunk)->isVAO)
+		{
+			const GLuint vao = (*chunk)->getVAO();
+			const GLuint vbo = (*chunk)->getVBO();
+			const GLuint ebo = (*chunk)->getEBO();
+			glDeleteVertexArrays(1, &vao);
+			glDeleteBuffers(1, &vbo);
+			glDeleteBuffers(1, &ebo);
+		}
+		obj::Chunk *west = (*chunk)->getWest();
 		if (west)
 		{
 			std::lock_guard<std::mutex> next_lock(west->mutex);
-			chunk->getWest()->setEast(nullptr);
-		}	
-		obj::Chunk *east = chunk->getEast();
+			west->setEast(nullptr);
+		}
+		obj::Chunk *east = (*chunk)->getEast();
 		if (east)
 		{
 			std::lock_guard<std::mutex> next_lock(east->mutex);
-			chunk->getEast()->setWest(nullptr);
+			east->setWest(nullptr);
 		}
-		obj::Chunk *north = chunk->getNorth();
+		obj::Chunk *north = (*chunk)->getNorth();
 		if (north)
 		{
 			std::lock_guard<std::mutex> next_lock(north->mutex);
-			chunk->getNorth()->setSouth(nullptr);
+			north->setSouth(nullptr);
 		}
-		obj::Chunk *south = chunk->getSouth();
+		obj::Chunk *south = (*chunk)->getSouth();
 		if (south)
 		{
 			std::lock_guard<std::mutex> next_lock(south->mutex);
-			chunk->getSouth()->setNorth(nullptr);
+			south->setNorth(nullptr);
 		}
-		delete chunk;
-		chunk = nullptr;
-		chunksMap->erase(key);
-	} 
-	chunk_mutex.unlock();
+		delete (*chunk);
+	}
+	toDelete.clear();
 }
 
-void	delete_all_chunk(std::map<std::pair<int, int>, obj::Chunk *>	*chunksMap)
+void delete_all_chunk(std::map<std::pair<int, int>, obj::Chunk *> *chunksMap)
 {
-	std::map<std::pair<int, int>, obj::Chunk *>::iterator	chunk;
+	std::map<std::pair<int, int>, obj::Chunk *>::iterator chunk;
 	chunk_mutex.lock();
 	for (chunk = chunksMap->begin(); chunk != chunksMap->end(); chunk++)
 	{
-		std::lock_guard<std::mutex> lock (chunk->second->mutex);
-		if (chunk->second->isVAO)
-		{
-			toDeleteVao_mutex.lock();
-			toDeleteVAO.push_back(chunk->second->getVAO());
-			toDeleteVAO.push_back(chunk->second->getVBO());
-			toDeleteVAO.push_back(chunk->second->getEBO());
-			toDeleteVao_mutex.unlock();
-		}
-		delete chunk->second;
+		std::lock_guard<std::mutex> lock(chunk->second->mutex);
+		toDelete.push_back(chunk->second);
 	}
 	chunksMap->clear();
 	chunk_mutex.unlock();
 }
 
-void	update_thread(std::vector<obj::Chunk *> **stable_state, GLFWwindow *window)
+void update_thread(std::vector<obj::Chunk *> **stable_state, GLFWwindow *window)
 {
-	std::map<std::pair<int, int>, obj::Chunk *>	chunksMap;
-	std::vector<obj::Chunk *>					*tmp_state = new std::vector<obj::Chunk *>;
+	std::map<std::pair<int, int>, obj::Chunk *> chunksMap;
+	std::vector<obj::Chunk *> *tmp_state = new std::vector<obj::Chunk *>;
 
-	std::vector<std::thread>			generation;
-	std::vector<std::pair<int, int>>	buffer;
+	std::vector<std::thread> generation;
+	std::vector<std::pair<int, int>> buffer;
 	int camX, camY;
 	int g_pos = 0;
-	int	last_x = 13213;
-	int	last_y = 3213;
+	int last_x = 13213;
+	int last_y = 3213;
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -244,39 +258,21 @@ void	update_thread(std::vector<obj::Chunk *> **stable_state, GLFWwindow *window)
 		stable_mutex.unlock();
 		tmp_state = new std::vector<obj::Chunk *>();
 
-		delete_chunk(&chunksMap, camX, camY);
+		erase_chunk_from_map(&chunksMap, camX, camY);
 	}
 	delete_all_chunk(&chunksMap);
 	if (tmp_state != nullptr)
 		delete tmp_state;
 }
 
-void	deleteBuffers()
-{
-	std::lock_guard<std::mutex>	lock(toDeleteVao_mutex);
-	if (toDeleteVAO.size() == 0)
-		return;
-	for (int i = 0; i < toDeleteVAO.size(); i += 3)
-	{
-		unsigned int vao = toDeleteVAO[i];
-		unsigned int vbo = toDeleteVAO[i + 1];
-		unsigned int ebo = toDeleteVAO[i + 2];
-		glDeleteVertexArrays(1, &vao);
-		glDeleteBuffers(1, &vbo);
-		glDeleteBuffers(1, &ebo);
-	}
-	toDeleteVAO.clear();
-}
-
 int main()
 {
-	GLFWwindow* window = glfw_init_window();
+	GLFWwindow *window = glfw_init_window();
 	if (window == nullptr)
 	{
 		glfwTerminate();
 		return -1;
 	}
-	// Profiler::SetSaveOn();
 
 	// build and compile our shader dirtUpgradezprogram
 	obj::Shader ourShader("srcs/shaders/vertex_shader.vs", "srcs/shaders/fragment_shader.fs", nullptr);
@@ -285,19 +281,19 @@ int main()
 	obj::TextureLoader textureLoader;
 
 	bool res = textureLoader.LoadTextureArray(
-	{
-		std::filesystem::path("textures/grass.png"),
-		std::filesystem::path("textures/grass.png"),
-		std::filesystem::path("textures/grass_side.png"),
-		std::filesystem::path("textures/snow.png"),
-		std::filesystem::path("textures/snow_side.png"),
-		std::filesystem::path("textures/NewWater.png"),
-		std::filesystem::path("textures/dirt.png"),
-		std::filesystem::path("textures/stone.png"),
-		std::filesystem::path("textures/bedrock.png"),
-		std::filesystem::path("textures/gravel.png"),
-		std::filesystem::path("textures/sand.png"),
-	});
+		{
+			std::filesystem::path("textures/grass.png"),
+			std::filesystem::path("textures/grass.png"),
+			std::filesystem::path("textures/grass_side.png"),
+			std::filesystem::path("textures/snow.png"),
+			std::filesystem::path("textures/snow_side.png"),
+			std::filesystem::path("textures/NewWater.png"),
+			std::filesystem::path("textures/dirt.png"),
+			std::filesystem::path("textures/stone.png"),
+			std::filesystem::path("textures/bedrock.png"),
+			std::filesystem::path("textures/gravel.png"),
+			std::filesystem::path("textures/sand.png"),
+		});
 	if (res)
 		textureArray = textureLoader.GetTextureArray();
 	else
@@ -315,8 +311,8 @@ int main()
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 
 	// thread loop
-	std::vector<obj::Chunk *>	*stable_state = new std::vector<obj::Chunk *>;
-	std::thread	secondaryThread(update_thread, &stable_state, window);
+	std::vector<obj::Chunk *> *stable_state = new std::vector<obj::Chunk *>;
+	std::thread secondaryThread(update_thread, &stable_state, window);
 
 	// render loop
 	while (!glfwWindowShouldClose(window))
@@ -327,7 +323,7 @@ int main()
 		camMutex.unlock();
 		glBindTexture(GL_TEXTURE_2D_ARRAY, textureArray.id);
 		draw(window, ourShader, skybox, stable_state);
-		deleteBuffers();
+		delete_chunk_from_toDelete(stable_state);
 	}
 
 	secondaryThread.join();
@@ -337,7 +333,7 @@ int main()
 		delete stable_state;
 	stable_mutex.unlock();
 
-	deleteBuffers();
+	delete_chunk_from_toDelete(nullptr);
 
 	glfwDestroyWindow(window);
 
@@ -356,7 +352,7 @@ int main()
 	return 0;
 }
 
-void	draw(GLFWwindow* window, obj::Shader &ourShader, obj::Skybox &skybox, std::vector<obj::Chunk *>	*stable_state)
+void draw(GLFWwindow *window, obj::Shader &ourShader, obj::Skybox &skybox, std::vector<obj::Chunk *> *stable_state)
 {
 	// per-frame time logic
 	float currentFrame = static_cast<float>(glfwGetTime());
@@ -378,25 +374,28 @@ void	draw(GLFWwindow* window, obj::Shader &ourShader, obj::Skybox &skybox, std::
 
 	ourShader.setInt("TextureArraySize", 6);
 
-	stable_mutex.lock();
 	if (stable_state != nullptr)
 	{
+		std::lock_guard<std::mutex> stable_lock(stable_mutex);
 		for (std::vector<obj::Chunk *>::iterator chunk = stable_state->begin(); chunk != stable_state->end(); chunk++)
 		{
-			std::cout << "1" << std::endl;
+			// std::cout << "1" << std::endl;
 			if (!(*chunk))
+			{
+				// std::cout << "if" << std::endl;
 				continue;
-			std::cout << "2" << std::endl;
+			}
+			// std::cout << "2" << std::endl;
+			std::lock_guard<std::mutex> lock((*chunk)->mutex);
+			// std::cout << "3" << std::endl;
 			if ((*chunk)->isCreated == false)
 				continue;
 			if ((*chunk)->isVAO == false)
 				(*chunk)->setupMesh();
-			std::cout << "3" << std::endl;
 			(*chunk)->draw();
-			std::cout << "4" << std::endl;
+			// std::cout << "4" << std::endl;
 		}
 	}
-	stable_mutex.unlock();
 
 	if (skybox_active)
 		skybox.draw(view, projection);
@@ -406,7 +405,7 @@ void	draw(GLFWwindow* window, obj::Shader &ourShader, obj::Skybox &skybox, std::
 	glfwPollEvents();
 }
 
-GLFWwindow*	glfw_init_window(void)
+GLFWwindow *glfw_init_window(void)
 {
 	// glfw: initialize and configure
 	glfwInit();
@@ -419,7 +418,7 @@ GLFWwindow*	glfw_init_window(void)
 #endif
 
 	// glfw window creation
-	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "ft_vox", NULL, NULL);
+	GLFWwindow *window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "ft_vox", NULL, NULL);
 	if (window == NULL)
 	{
 		std::cout << "Failed to create GLFW window" << std::endl;
@@ -445,7 +444,7 @@ GLFWwindow*	glfw_init_window(void)
 	return window;
 }
 
-std::map<std::string, bool>	key_map;
+std::map<std::string, bool> key_map;
 float speed = 0.1f;
 
 // void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -500,14 +499,14 @@ void processInput(GLFWwindow *window)
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+void framebuffer_size_callback(GLFWwindow *window, int width, int height)
 {
 	(void)window;
 	glViewport(0, 0, width, height);
 }
 
 // glfw: whenever the mouse moves, this callback is called
-void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
+void mouse_callback(GLFWwindow *window, double xposIn, double yposIn)
 {
 	(void)window;
 	float xpos = static_cast<float>(xposIn);
@@ -526,11 +525,11 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 	lastX = xpos;
 	lastY = ypos;
 
-	camera.ProcessMouseMovement(xoffset*0.1, yoffset* 0.1, true);
+	camera.ProcessMouseMovement(xoffset * 0.1, yoffset * 0.1, true);
 }
 
 // glfw: whenever the mouse scroll wheel scrolls, this callback is called
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+void scroll_callback(GLFWwindow *window, double xoffset, double yoffset)
 {
 	(void)window;
 	(void)xoffset;
