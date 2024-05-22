@@ -1,4 +1,4 @@
-#version 330 core
+#version 450 core
 out	vec4	FragColor;
 
 in vec2		Texture;
@@ -7,21 +7,6 @@ flat in int	blockid;
 flat in int	face;
 
 uniform sampler2DArray	TextureArray;
-
-// struct BlockType
-// {
-// 	int air = 0,
-// 	int grass = 1,
-// 	int grassSide = 2,
-// 	int snow = 3,
-// 	int snowSide = 4,
-// 	int water = 5,
-// 	int dirt = 6,
-// 	int stone = 7,
-// 	int bedrock = 8,
-// 	int gravel = 9,
-// 	int sand = 10,
-// }	type;
 
 void main()
 {

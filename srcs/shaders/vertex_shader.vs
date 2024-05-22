@@ -1,4 +1,4 @@
-#version 330 core
+#version 450 core
 layout (location = 0) in vec3	aPos;
 layout (location = 1) in vec3	aNormal;
 layout (location = 2) in vec2	aTexCoord;
@@ -13,21 +13,6 @@ flat out int	face;
 uniform mat4	model;
 uniform mat4	view;
 uniform mat4	projection;
-
-// struct BlockType
-// {
-// 	int air = 0,
-// 	int grass = 1,
-// 	int grassSide = 2,
-// 	int snow = 3,
-// 	int snowSide = 4,
-// 	int water = 5,
-// 	int dirt = 6,
-// 	int stone = 7,
-// 	int bedrock = 8,
-// 	int gravel = 9,
-// 	int sand = 10,
-// }	type;
 
 void main()
 {

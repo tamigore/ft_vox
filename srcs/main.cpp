@@ -49,7 +49,7 @@ std::mutex camMutex;
 int stableCamX = 0;
 int stableCamY = 0;
 
-unsigned int renderDistance = 2;
+unsigned int renderDistance = 8;
 ChunkGenerator generator = ChunkGenerator(42);
 
 // Thread
@@ -213,7 +213,11 @@ void update_thread(std::vector<obj::Chunk *> **stable_state, GLFWwindow *window)
 			buffer.clear();
 		}
 		for (auto chunk : *tmp_state)
+		{
+			chunk->mutex.lock();
 			chunk->generateFaces();
+			chunk->mutex.unlock();
+		}
 		stable_mutex.lock();
 		delete *stable_state;
 		*stable_state = tmp_state;
@@ -380,7 +384,7 @@ GLFWwindow*	glfw_init_window(void)
 	// glfw: initialize and configure
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 #ifdef __APPLE__
@@ -411,19 +415,19 @@ GLFWwindow*	glfw_init_window(void)
 	// enable modes
 	glEnable(GL_DEPTH_TEST);
 
-	glEnable(GL_BLEND);
+	// glEnable(GL_BLEND);
 	// glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glDisable(GL_CULL_FACE);
+	// glDisable(GL_CULL_FACE);
 	return window;
 }
 
 std::map<std::string, bool>	key_map;
 float speed = 0.1f;
 
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
-{
-	std::cout << key << std::endl;
-}
+// void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+// {
+// 	std::cout << key << std::endl;
+// }
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 void processInput(GLFWwindow *window)
@@ -468,29 +472,7 @@ void processInput(GLFWwindow *window)
 		key_map["control"] = false;
 	}
 
-	if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
-		key_map["1"] = true;
-	if (glfwGetKey(window, GLFW_KEY_1) == GLFW_RELEASE && key_map["1"])
-	{
-		renderDistance = 10;
-		key_map["1"] = true;
-	}
-	if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
-		key_map["2"] = true;
-	if (glfwGetKey(window, GLFW_KEY_2) == GLFW_RELEASE && key_map["2"])
-	{
-		renderDistance = 2;
-		key_map["2"] = true;
-	}
-	if (glfwGetKey(window, GLFW_KEY_5) == GLFW_PRESS)
-		key_map["5"] = true;
-	if (glfwGetKey(window, GLFW_KEY_5) == GLFW_RELEASE && key_map["5"])
-	{
-		renderDistance = 5;
-		key_map["5"] = true;
-	}
-
-	glfwSetKeyCallback(window, key_callback);
+	// glfwSetKeyCallback(window, key_callback);
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
