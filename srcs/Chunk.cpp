@@ -7,14 +7,12 @@ using namespace obj;
 Chunk::Chunk(int x, int y) : posX(x), posY(y)
 {
 	int size = size_x * size_y * size_z;
-	chunk = std::make_unique<unsigned char []>(size);
+	chunk = std::make_unique<unsigned char[]>(size);
 }
 
-Chunk::~Chunk()
-{
-}
+Chunk::~Chunk() {}
 
-void	Chunk::createFaces(int x, int y, int z, int position, int face, int block)
+void Chunk::createFaces(int x, int y, int z, int position, int face, int block)
 {
 	math::vec3 angle[4];
 	(void)position;
@@ -65,19 +63,18 @@ void	Chunk::createFaces(int x, int y, int z, int position, int face, int block)
 		math::vec2(0.0f, 0.0f),
 		math::vec2(1.0f, 0.0f),
 		math::vec2(1.0f, 1.0f),
-		math::vec2(0.0f, 1.0f)
-	};
+		math::vec2(0.0f, 1.0f)};
 
-	indices.push_back(vertices.size());	
+	indices.push_back(vertices.size());
 	indices.push_back(vertices.size() + 1);
 	indices.push_back(vertices.size() + 2);
-	indices.push_back(vertices.size());	
+	indices.push_back(vertices.size());
 	indices.push_back(vertices.size() + 2);
 	indices.push_back(vertices.size() + 3);
 	tmp.TextureCoordonates = texture[0];
 	tmp.Position = angle[0];
-    tmp.Face = face;
-    tmp.Block = block;
+	tmp.Face = face;
+	tmp.Block = block;
 	vertices.push_back(tmp);
 	tmp.TextureCoordonates = texture[1];
 	tmp.Position = angle[1];
@@ -90,34 +87,34 @@ void	Chunk::createFaces(int x, int y, int z, int position, int face, int block)
 	vertices.push_back(tmp);
 }
 
-void	Chunk::setupMesh()
+void Chunk::setupMesh()
 {
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glGenBuffers(1, &EBO);
+	glGenVertexArrays(1, &VAO);
+	glGenBuffers(1, &VBO);
+	glGenBuffers(1, &EBO);
 
-    glBindVertexArray(VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_STATIC_DRAW);  
+	glBindVertexArray(VAO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_STATIC_DRAW);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
 
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Position));
-    glEnableVertexAttribArray(1);	
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Normal));
-    glEnableVertexAttribArray(2);	
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, TextureCoordonates));
-    glEnableVertexAttribArray(3);	
-    glVertexAttribIPointer(3, 1, GL_INT, sizeof(Vertex), (void*)offsetof(Vertex, Face));
-    glEnableVertexAttribArray(4);
-    glVertexAttribIPointer(4, 1, GL_INT, sizeof(Vertex), (void*)offsetof(Vertex, Block));
-    glBindVertexArray(0);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *)offsetof(Vertex, Position));
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *)offsetof(Vertex, Normal));
+	glEnableVertexAttribArray(2);
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *)offsetof(Vertex, TextureCoordonates));
+	glEnableVertexAttribArray(3);
+	glVertexAttribIPointer(3, 1, GL_INT, sizeof(Vertex), (void *)offsetof(Vertex, Face));
+	glEnableVertexAttribArray(4);
+	glVertexAttribIPointer(4, 1, GL_INT, sizeof(Vertex), (void *)offsetof(Vertex, Block));
+	glBindVertexArray(0);
 	isVAO = true;
 }
 
-void	Chunk::draw(Shader &shader)
+void Chunk::draw(Shader &shader)
 {
 	if (!isCreated)
 		return;
@@ -129,27 +126,30 @@ void	Chunk::draw(Shader &shader)
 	glActiveTexture(GL_TEXTURE0);
 }
 
-void	Chunk::generateFaces(void)
+void Chunk::generateFaces(void)
 {
 	if (isCreated)
 		return;
 
-	Chunk	*west = getWest();
-	Chunk	*east = getEast();
-	Chunk	*north = getNorth();
-	Chunk	*south = getSouth();
+	Chunk *west = getWest();
+	Chunk *east = getEast();
+	Chunk *north = getNorth();
+	Chunk *south = getSouth();
 
 	if (!west || !east || !north || !south)
 		return;
 
-	west->mutex.lock();
-	east->mutex.lock();
-	north->mutex.lock();
-	south->mutex.lock();
+	std::lock_guard<std::mutex> wlock(west->mutex);
+	std::lock_guard<std::mutex> elock(east->mutex);
+	std::lock_guard<std::mutex> nlock(north->mutex);
+	std::lock_guard<std::mutex> slock(south->mutex);
 
-	for (int x = 0; x < size_x; x++){
-		for (int y = 0; y < size_y; y++){
-			for (int z = 0; z < size_z; z++){
+	for (int x = 0; x < size_x; x++)
+	{
+		for (int y = 0; y < size_y; y++)
+		{
+			for (int z = 0; z < size_z; z++)
+			{
 				int position = z + y * size_z + x * size_y * size_z;
 				int block = chunk[position];
 				if (!block)
@@ -174,29 +174,25 @@ void	Chunk::generateFaces(void)
 					createFaces(posX * size_x + x, posY * size_y + y, z, position, 4, block);
 				position = z + y * size_z + (x + 1) * size_y * size_z;
 				if ((x + 1 <= 15 && isTransparent(position, block)) ||
-					(x == 15 && east->isTransparent(z + y * size_z, block)))	
+					(x == 15 && east->isTransparent(z + y * size_z, block)))
 					createFaces(posX * size_x + x, posY * size_y + y, z, position, 5, block);
 			}
 		}
 	}
 	isCreated = true;
-	west->mutex.unlock();
-	east->mutex.unlock();
-	north->mutex.unlock();
-	south->mutex.unlock();
 }
 
-Chunk	*Chunk::getWest() { return west; }
-Chunk	*Chunk::getEast() { return east; }
-Chunk	*Chunk::getNorth() { return north; }
-Chunk	*Chunk::getSouth() { return south; }
+Chunk *Chunk::getWest() { return west; }
+Chunk *Chunk::getEast() { return east; }
+Chunk *Chunk::getNorth() { return north; }
+Chunk *Chunk::getSouth() { return south; }
 
-void	Chunk::setWest(Chunk *c) { west = c; }
-void	Chunk::setEast(Chunk *c) { east = c; }
-void	Chunk::setNorth(Chunk *c) { north = c; }
-void	Chunk::setSouth(Chunk *c) { south = c; }
+void Chunk::setWest(Chunk *c) { west = c; }
+void Chunk::setEast(Chunk *c) { east = c; }
+void Chunk::setNorth(Chunk *c) { north = c; }
+void Chunk::setSouth(Chunk *c) { south = c; }
 
-bool	Chunk::isTransparent(int position, unsigned int block)
+bool Chunk::isTransparent(int position, unsigned int block)
 {
 	return (chunk[position] == BlockType::air || (chunk[position] == BlockType::water && block != BlockType::water));
 }

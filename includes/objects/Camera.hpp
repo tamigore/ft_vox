@@ -9,52 +9,52 @@
 namespace obj
 {
 
-enum camera_movement
-{
-	FORWARD,
-	BACKWARD,
-	LEFT,
-	RIGHT,
-	UP,
-	DOWN,
-};
+    enum camera_movement
+    {
+        FORWARD,
+        BACKWARD,
+        LEFT,
+        RIGHT,
+        UP,
+        DOWN,
+    };
 
-const float YAW         = -90.0f;
-const float PITCH       =  0.0f;
-const float SPEED       =  30.0f;
-const float SENSITIVITY =  0.1f;
-const float ZOOM        =  40.0f;
+    const float YAW = -90.0f;
+    const float PITCH = 0.0f;
+    const float SPEED = 30.0f;
+    const float SENSITIVITY = 0.1f;
+    const float ZOOM = 40.0f;
 
-class Camera
-{
-public:
-    math::vec3 Position;
-    math::vec3 Front;
-    math::vec3 Up;
-    math::vec3 Right;
-    math::vec3 WorldUp;
-    float Yaw;
-    float Pitch;
-    float MovementSpeed;
-    float MouseSensitivity;
-    float Zoom;
-    std::mutex mutex;
+    class Camera
+    {
+    public:
+        math::vec3 Position;
+        math::vec3 Front;
+        math::vec3 Up;
+        math::vec3 Right;
+        math::vec3 WorldUp;
+        float Yaw;
+        float Pitch;
+        float MovementSpeed;
+        float MouseSensitivity;
+        float Zoom;
+        std::mutex mutex;
 
-    Camera();
-	Camera(math::vec3 position);
-    Camera(math::vec3 position, math::vec3 up, float yaw, float pitch);
-    Camera(float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch);
-	~Camera();
+        Camera();
+        Camera(math::vec3 position);
+        Camera(math::vec3 position, math::vec3 up, float yaw, float pitch);
+        Camera(float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch);
+        ~Camera();
 
-    math::mat4 GetViewMatrix();
-    void ProcessKeyboard(camera_movement direction, float deltaTime);
-    void ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch);
-    void ProcessMouseScroll(float yoffset);
+        math::mat4 GetViewMatrix();
+        void ProcessKeyboard(camera_movement direction, float deltaTime);
+        void ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch);
+        void ProcessMouseScroll(float yoffset);
 
-private:
-    void updateCameraVectors();
-};
+    private:
+        void updateCameraVectors();
+    };
 
-} // namespace obj
+}
 
 #endif
