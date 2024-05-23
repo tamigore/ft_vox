@@ -383,17 +383,13 @@ void	draw(GLFWwindow* window, obj::Shader &ourShader, obj::Skybox &skybox, std::
 	{
 		for (std::vector<obj::Chunk *>::iterator chunk = stable_state->begin(); chunk != stable_state->end(); chunk++)
 		{
-			std::cout << "1" << std::endl;
 			if (!(*chunk))
 				continue;
-			std::cout << "2" << std::endl;
 			if ((*chunk)->isCreated == false)
 				continue;
 			if ((*chunk)->isVAO == false)
 				(*chunk)->setupMesh();
-			std::cout << "3" << std::endl;
 			(*chunk)->draw();
-			std::cout << "4" << std::endl;
 		}
 	}
 	stable_mutex.unlock();
