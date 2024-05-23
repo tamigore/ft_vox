@@ -93,7 +93,7 @@ obj::Chunk	*ChunkGenerator::generateChunk(int posX, int posY)
 						if (z < terrainHight - (bedrock * 2))
 						{
 							res->chunk[block] = BlockType::stone;
-							if (z < terrainHight - 10 - (bedrock * 2))
+							if (z < terrainHight - 10 - (bedrock * 2) && z > 10 + (bedrock * 2))
 							{
 								float big = caveGenerator(px, py, z);
 								if (big > 0.5)
