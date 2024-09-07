@@ -49,7 +49,7 @@ std::mutex camMutex;
 int stableCamX = 0;
 int stableCamY = 0;
 
-unsigned int renderDistance = 8;
+unsigned int renderDistance = 4;
 ChunkGenerator generator = ChunkGenerator(42);
 
 // Thread
